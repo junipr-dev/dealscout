@@ -254,3 +254,116 @@ async def search_completed_listings(
     # For now, use the browse API which gives current listings
     # This gives a good estimate of market value
     return await get_market_value(search_term, condition)
+
+
+# Rickman, TN location for local pickup searches
+HOME_ZIP = "38580"
+HOME_RADIUS_MILES = 100
+
+
+async def check_local_pickup_available(
+    search_term: str,
+    condition: str = "used",
+    limit: int = 5,
+) -> Optional[dict]:
+    """
+    Check if similar items are available for local pickup on eBay within 100mi.
+
+    Uses eBay Browse API with pickup filters:
+    - pickupCountry, pickupPostalCode, pickupRadius, pickupRadiusUnit
+    - deliveryOptions: SELLER_ARRANGED_LOCAL_PICKUP
+
+    Returns:
+        Dict with local pickup listings or None if none found.
+    """
+    token = await get_ebay_access_token()
+    if not token:
+        return None
+
+    condition_filter = "USED" if condition == "used" else "NEW"
+
+    # Build filter with local pickup requirements
+    pickup_filter = (
+        f"conditionIds:{{{condition_filter}}},"
+        f"pickupCountry:US,"
+        f"pickupPostalCode:{HOME_ZIP},"
+        f"pickupRadius:{HOME_RADIUS_MILES},"
+        f"pickupRadiusUnit:mi,"
+        f"deliveryOptions:{{SELLER_ARRANGED_LOCAL_PICKUP}}"
+    )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                EBAY_API_URL,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+                },
+                params={
+                    "q": search_term,
+                    "filter": pickup_filter,
+                    "sort": "distance",
+                    "limit": limit,
+                },
+                timeout=10.0,
+            )
+
+            if response.status_code != 200:
+                print(f"eBay local pickup search failed: {response.status_code}")
+                return None
+
+            data = response.json()
+            items = data.get("itemSummaries", [])
+
+            if not items:
+                return None
+
+            # Extract local pickup listings
+            local_items = []
+            for item in items:
+                price_data = item.get("price", {})
+                if price_data.get("currency") == "USD":
+                    local_items.append({
+                        "title": item.get("title"),
+                        "price": float(price_data.get("value", 0)),
+                        "condition": item.get("condition"),
+                        "item_id": item.get("itemId"),
+                        "location": item.get("itemLocation", {}).get("city"),
+                        "distance": item.get("distanceFromPickupLocation", {}).get("value"),
+                    })
+
+            if not local_items:
+                return None
+
+            return {
+                "count": len(local_items),
+                "items": local_items,
+                "search_term": search_term,
+            }
+
+    except Exception as e:
+        print(f"eBay local pickup search error: {e}")
+        return None
+
+
+async def get_market_value_with_local(
+    search_term: str,
+    condition: str = "used",
+    limit: int = 20,
+) -> Optional[dict]:
+    """
+    Get market value AND check for local pickup availability.
+
+    Returns market value data with additional 'local_pickup' field if available.
+    """
+    # Run both searches in parallel
+    market_task = get_market_value(search_term, condition, limit)
+    local_task = check_local_pickup_available(search_term, condition, 5)
+
+    market_result, local_result = await asyncio.gather(market_task, local_task)
+
+    if market_result and local_result:
+        market_result["local_pickup"] = local_result
+
+    return market_result
