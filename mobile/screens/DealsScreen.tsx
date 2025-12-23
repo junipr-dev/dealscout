@@ -146,7 +146,7 @@ export default function DealsScreen() {
     navigation.navigate('DealDetail', { deal });
   };
 
-  const handleConditionUpdate = async (deal: Deal, condition: 'new' | 'used') => {
+  const handleConditionUpdate = async (deal: Deal, condition: 'new' | 'used' | 'needs_repair') => {
     try {
       const updatedDeal = await api.updateCondition(deal.id, condition);
       const newMarketValue = Number(updatedDeal.market_value) || 0;
@@ -270,10 +270,15 @@ export default function DealsScreen() {
     }
   };
 
-  const confirmConditionUpdate = (item: Deal, condition: 'new' | 'used') => {
+  const confirmConditionUpdate = (item: Deal, condition: 'new' | 'used' | 'needs_repair') => {
+    const conditionLabel = condition === 'needs_repair' ? 'NEEDS REPAIR' : condition.toUpperCase();
+    const description = condition === 'needs_repair'
+      ? 'This item will be flagged for repair. Market value will be based on broken/parts pricing.'
+      : `This will calculate market value and profit based on ${condition} item prices.`;
+
     Alert.alert(
-      `Set as ${condition.toUpperCase()}?`,
-      `This will calculate market value and profit based on ${condition} item prices.`,
+      `Set as ${conditionLabel}?`,
+      description,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -308,26 +313,53 @@ export default function DealsScreen() {
       <Text style={styles.reviewPrice}>
         ${Number(item.asking_price)?.toFixed(2) || '?'}
       </Text>
-      <Text style={styles.reviewQuestion}>New or Used?</Text>
+      <Text style={styles.reviewQuestion}>
+        {item.repair_needed ? 'Confirm repair needed?' : 'Condition?'}
+      </Text>
       <View style={styles.conditionButtons}>
-        <TouchableOpacity
-          style={[styles.conditionBtn, styles.newBtn]}
-          onPress={(e) => {
-            e.stopPropagation();
-            confirmConditionUpdate(item, 'new');
-          }}
-        >
-          <Text style={styles.conditionBtnText}>New</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.conditionBtn, styles.usedBtn]}
-          onPress={(e) => {
-            e.stopPropagation();
-            confirmConditionUpdate(item, 'used');
-          }}
-        >
-          <Text style={styles.conditionBtnText}>Used</Text>
-        </TouchableOpacity>
+        {item.repair_needed ? (
+          <>
+            <TouchableOpacity
+              style={[styles.conditionBtn, styles.repairBtn]}
+              onPress={(e) => {
+                e.stopPropagation();
+                confirmConditionUpdate(item, 'needs_repair');
+              }}
+            >
+              <Text style={styles.conditionBtnText}>Repair</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.conditionBtn, styles.usedBtn]}
+              onPress={(e) => {
+                e.stopPropagation();
+                confirmConditionUpdate(item, 'used');
+              }}
+            >
+              <Text style={styles.conditionBtnText}>Works</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.conditionBtn, styles.newBtn]}
+              onPress={(e) => {
+                e.stopPropagation();
+                confirmConditionUpdate(item, 'new');
+              }}
+            >
+              <Text style={styles.conditionBtnText}>New</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.conditionBtn, styles.usedBtn]}
+              onPress={(e) => {
+                e.stopPropagation();
+                confirmConditionUpdate(item, 'used');
+              }}
+            >
+              <Text style={styles.conditionBtnText}>Used</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -340,6 +372,9 @@ export default function DealsScreen() {
     const bestProfit = Math.max(ebayProfit, facebookProfit);
     const isFacebookOnly = ebayProfit <= 0 && facebookProfit > 0;
     const canPurchase = item.condition !== 'unknown' && item.market_value != null;
+
+    // Check if this is a repair item
+    const isRepairItem = item.condition === 'needs_repair' || item.repair_needed === true;
 
     // Get distance - prefer backend value, fallback to frontend calculation
     const distance = item.distance_miles ?? (item.location ? Math.round(getDistanceFromHome(item.location) || 0) : null);
@@ -359,13 +394,24 @@ export default function DealsScreen() {
           ? '#ffc107'
           : '#888';
 
+    // Deal score color
+    const getScoreColor = (score: number | null) => {
+      if (score === null) return '#666';
+      if (score >= 70) return '#4ecca3';
+      if (score >= 50) return '#ffc107';
+      return '#ff6b6b';
+    };
+
     const isFading = fadingDeals.has(item.id);
     const fadeAnim = getFadeAnim(item.id);
 
     return (
       <Animated.View style={{ opacity: isFading ? fadeAnim : 1 }}>
         <TouchableOpacity
-          style={styles.dealCard}
+          style={[
+            styles.dealCard,
+            isRepairItem && styles.repairCard,
+          ]}
           onPress={() => navigateToDetail(item)}
         >
           <View style={styles.dealHeader}>
@@ -404,10 +450,21 @@ export default function DealsScreen() {
 
           <View style={styles.dealMeta}>
             <Text style={styles.metaText}>{item.source || 'Unknown'}</Text>
-            <Text style={[styles.metaText, styles.conditionBadge]}>
-              {item.condition || '?'}
-            </Text>
+            {isRepairItem ? (
+              <View style={styles.repairBadge}>
+                <Text style={styles.repairBadgeText}>REPAIR</Text>
+              </View>
+            ) : (
+              <Text style={[styles.metaText, styles.conditionBadge]}>
+                {item.condition || '?'}
+              </Text>
+            )}
             <Text style={styles.metaText}>{item.category || ''}</Text>
+            {item.deal_score !== null && (
+              <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.deal_score) }]}>
+                <Text style={styles.scoreBadgeText}>{item.deal_score}</Text>
+              </View>
+            )}
             {isWithinPickupRange && distance !== null && (
               <Text style={styles.distanceText}>{distance} mi</Text>
             )}
@@ -704,6 +761,9 @@ const styles = StyleSheet.create({
   usedBtn: {
     backgroundColor: '#6c757d',
   },
+  repairBtn: {
+    backgroundColor: '#ff9800',
+  },
   conditionBtnText: {
     color: '#fff',
     fontWeight: 'bold',
@@ -715,6 +775,10 @@ const styles = StyleSheet.create({
     padding: 16,
     margin: 8,
     marginHorizontal: 16,
+  },
+  repairCard: {
+    borderWidth: 2,
+    borderColor: '#ff9800',
   },
   dealHeader: {
     flexDirection: 'row',
@@ -788,6 +852,29 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  repairBadge: {
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  repairBadgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  scoreBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scoreBadgeText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   distanceText: {
     color: '#4ecca3',

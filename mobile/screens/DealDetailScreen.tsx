@@ -435,6 +435,162 @@ export default function DealDetailScreen() {
           )}
         </View>
 
+        {/* Repair Info (if needs repair) */}
+        {(deal.condition === 'needs_repair' || deal.repair_needed) && (
+          <View style={[styles.repairSection, { borderColor: '#ff9800' }]}>
+            <Text style={[styles.sectionTitle, { color: '#ff9800' }]}>
+              Repair Information
+            </Text>
+            {deal.repair_notes && (
+              <Text style={styles.repairNotes}>{deal.repair_notes}</Text>
+            )}
+            {deal.repair_feasibility && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Difficulty</Text>
+                <Text style={[styles.detailValue, { textTransform: 'capitalize' }]}>
+                  {deal.repair_feasibility}
+                </Text>
+              </View>
+            )}
+            {deal.repair_part_needed && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Part Needed</Text>
+                <Text style={styles.detailValue}>{deal.repair_part_needed}</Text>
+              </View>
+            )}
+            {deal.repair_part_cost !== null && (
+              <View style={styles.repairCostBreakdown}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Part Cost</Text>
+                  <Text style={styles.detailValue}>${Number(deal.repair_part_cost).toFixed(2)}</Text>
+                </View>
+                {deal.repair_labor_estimate !== null && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Labor Est.</Text>
+                    <Text style={styles.detailValue}>${Number(deal.repair_labor_estimate).toFixed(2)}</Text>
+                  </View>
+                )}
+                {deal.repair_total_estimate !== null && (
+                  <View style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8 }]}>
+                    <Text style={[styles.detailLabel, { fontWeight: 'bold' }]}>Total Repair</Text>
+                    <Text style={[styles.detailValue, { fontWeight: 'bold', color: '#ff9800' }]}>
+                      ${Number(deal.repair_total_estimate).toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {deal.repair_part_url && (
+              <TouchableOpacity
+                style={styles.partLinkBtn}
+                onPress={() => Linking.openURL(deal.repair_part_url!)}
+              >
+                <Text style={styles.partLinkText}>View Part on eBay →</Text>
+              </TouchableOpacity>
+            )}
+            {deal.true_profit !== null && (
+              <View style={styles.trueProfitRow}>
+                <Text style={styles.trueProfitLabel}>Profit After Repair</Text>
+                <Text style={[
+                  styles.trueProfitValue,
+                  { color: Number(deal.true_profit) > 0 ? '#4ecca3' : '#ff6b6b' }
+                ]}>
+                  {Number(deal.true_profit) >= 0 ? '+' : ''}${Number(deal.true_profit).toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Deal Intelligence */}
+        {deal.deal_score !== null && (
+          <View style={styles.intelligenceSection}>
+            <Text style={styles.sectionTitle}>Deal Intelligence</Text>
+            <View style={styles.scoreRow}>
+              <View style={[
+                styles.scoreCircle,
+                { backgroundColor: deal.deal_score >= 70 ? '#4ecca3' : deal.deal_score >= 50 ? '#ffc107' : '#ff6b6b' }
+              ]}>
+                <Text style={styles.scoreText}>{deal.deal_score}</Text>
+              </View>
+              <View style={styles.scoreDetails}>
+                <Text style={styles.scoreLabel}>Deal Score</Text>
+                <Text style={styles.scoreDescription}>
+                  {deal.deal_score >= 70 ? 'Excellent deal' : deal.deal_score >= 50 ? 'Good deal' : 'Risky deal'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.indicatorsRow}>
+              {deal.risk_level && (
+                <View style={styles.indicator}>
+                  <Text style={styles.indicatorLabel}>Risk</Text>
+                  <Text style={[
+                    styles.indicatorValue,
+                    { color: deal.risk_level === 'low' ? '#4ecca3' : deal.risk_level === 'medium' ? '#ffc107' : '#ff6b6b' }
+                  ]}>
+                    {deal.risk_level.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              {deal.effort_level && (
+                <View style={styles.indicator}>
+                  <Text style={styles.indicatorLabel}>Effort</Text>
+                  <Text style={[
+                    styles.indicatorValue,
+                    { color: deal.effort_level === 'low' ? '#4ecca3' : deal.effort_level === 'medium' ? '#ffc107' : '#ff6b6b' }
+                  ]}>
+                    {deal.effort_level.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              {deal.demand_indicator && (
+                <View style={styles.indicator}>
+                  <Text style={styles.indicatorLabel}>Demand</Text>
+                  <Text style={[
+                    styles.indicatorValue,
+                    { color: deal.demand_indicator === 'high' ? '#4ecca3' : deal.demand_indicator === 'medium' ? '#ffc107' : '#ff6b6b' }
+                  ]}>
+                    {deal.demand_indicator.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {deal.flip_speed_prediction && (
+              <View style={styles.flipSpeedRow}>
+                <Text style={styles.flipSpeedLabel}>Est. Sell Time:</Text>
+                <Text style={styles.flipSpeedValue}>
+                  {deal.flip_speed_prediction === 'fast' ? '1-7 days' :
+                   deal.flip_speed_prediction === 'medium' ? '1-3 weeks' : '3+ weeks'}
+                </Text>
+              </View>
+            )}
+            {deal.price_trend && (
+              <View style={styles.trendRow}>
+                <Text style={styles.trendLabel}>Price Trend:</Text>
+                <Text style={styles.trendValue}>
+                  {deal.price_trend === 'up' ? '📈' : deal.price_trend === 'down' ? '📉' : '➡️'}
+                  {' '}{deal.price_trend_note || deal.price_trend}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Bundle Info */}
+        {deal.is_bundle && deal.bundle_items && deal.bundle_items.length > 0 && (
+          <View style={styles.bundleSection}>
+            <Text style={styles.sectionTitle}>Bundle Contents</Text>
+            {deal.bundle_items.map((item, index) => (
+              <Text key={index} style={styles.bundleItem}>• {item}</Text>
+            ))}
+            {deal.bundle_value_per_item !== null && (
+              <Text style={styles.bundleValueNote}>
+                ~${Number(deal.bundle_value_per_item).toFixed(2)} per item
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* View Original Listing */}
         <TouchableOpacity style={styles.viewListingBtn} onPress={openListing}>
           <Text style={[styles.viewListingText, isFacebookOnly && { color: '#1877F2' }]}>View Original Listing →</Text>
@@ -919,5 +1075,159 @@ const styles = StyleSheet.create({
   fullscreenImage: {
     width: SCREEN_WIDTH,
     height: '100%',
+  },
+  // Repair section styles
+  repairSection: {
+    backgroundColor: '#1a1a2e',
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+  },
+  repairNotes: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  repairCostBreakdown: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  partLinkBtn: {
+    backgroundColor: '#ff9800',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  partLinkText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  trueProfitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  trueProfitLabel: {
+    color: '#888',
+    fontSize: 14,
+  },
+  trueProfitValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  // Intelligence section styles
+  intelligenceSection: {
+    backgroundColor: '#1a1a2e',
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 12,
+    padding: 16,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  scoreCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  scoreText: {
+    color: '#000',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  scoreDetails: {
+    flex: 1,
+  },
+  scoreLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  scoreDescription: {
+    color: '#888',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  indicatorsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  indicator: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  indicatorLabel: {
+    color: '#888',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  indicatorValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  flipSpeedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  flipSpeedLabel: {
+    color: '#888',
+    fontSize: 14,
+  },
+  flipSpeedValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  trendRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  trendLabel: {
+    color: '#888',
+    fontSize: 14,
+  },
+  trendValue: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  // Bundle section styles
+  bundleSection: {
+    backgroundColor: '#1a1a2e',
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 12,
+    padding: 16,
+  },
+  bundleItem: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  bundleValueNote: {
+    color: '#4ecca3',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
   },
 });

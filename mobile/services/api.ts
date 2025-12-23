@@ -18,16 +18,60 @@ export interface Deal {
   subcategory: string | null;
   brand: string | null;
   model: string | null;
-  condition: string | null;
+  item_details: Record<string, any> | null;
+  condition: string | null; // new, used, needs_repair, unknown
   condition_confidence: string | null;
   market_value: number | null;
   estimated_profit: number | null;
+  ebay_sold_data: Record<string, any> | null;
   price_status: string | null; // accurate, similar_prices, limited_data, no_data, mock_data, user_set
   price_note: string | null;
-  local_pickup_available: boolean | null; // True if local pickup within 100mi
-  distance_miles: number | null; // Distance from home location
+  local_pickup_available: boolean | null;
+  distance_miles: number | null;
+
+  // Repair intelligence
+  repair_needed: boolean | null;
+  repair_keywords: string[] | null;
+  repair_feasibility: string | null; // easy, moderate, difficult, professional
+  repair_notes: string | null;
+  repair_part_needed: string | null;
+  repair_part_cost: number | null;
+  repair_part_url: string | null;
+  repair_labor_estimate: number | null;
+  repair_total_estimate: number | null;
+  true_profit: number | null;
+
+  // Enhanced classification
+  part_numbers: string[] | null;
+  variants: string | null;
+  is_bundle: boolean | null;
+  bundle_items: string[] | null;
+  bundle_value_per_item: number | null;
+  accessory_completeness: string | null;
+
+  // Deal scoring
+  deal_score: number | null; // 0-100
+  flip_speed_prediction: string | null; // fast, medium, slow
+  demand_indicator: string | null; // high, medium, low
+  risk_level: string | null; // low, medium, high
+  effort_level: string | null; // low, medium, high
+
+  // Price intelligence
+  price_trend: string | null; // up, down, stable
+  price_trend_note: string | null;
+
+  // Image intelligence
+  has_product_photos: boolean | null;
+  photo_quality: string | null; // good, fair, poor, none
+
+  // Seller intelligence
+  seller_username: string | null;
+  seller_rating: string | null;
+  seller_reputation: string | null;
+
   status: string;
   created_at: string;
+  notified_at: string | null;
 }
 
 export interface Flip {
@@ -132,11 +176,21 @@ class ApiService {
     await this.request(`/deals/${id}/dismiss`, { method: 'POST' });
   }
 
-  async updateCondition(id: number, condition: 'new' | 'used'): Promise<Deal> {
+  async updateCondition(id: number, condition: 'new' | 'used' | 'needs_repair'): Promise<Deal> {
     return this.request(`/deals/${id}/condition`, {
       method: 'POST',
       body: JSON.stringify({ condition }),
     });
+  }
+
+  async getListingSuggestion(id: number): Promise<{
+    deal_id: number;
+    suggested_title: string;
+    description: string;
+    ebay_category: { category_id: number; category_name: string; category_key: string };
+    testing_checklist: string[];
+  }> {
+    return this.request(`/deals/${id}/listing-suggestion`);
   }
 
   async purchaseDeal(
