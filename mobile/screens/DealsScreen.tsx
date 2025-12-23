@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { api, Deal } from '../services/api';
 
@@ -16,6 +18,11 @@ export default function DealsScreen() {
   const [needsReview, setNeedsReview] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [purchaseModal, setPurchaseModal] = useState<{ visible: boolean; deal: Deal | null }>({
+    visible: false,
+    deal: null,
+  });
+  const [purchasePrice, setPurchasePrice] = useState('');
 
   const loadDeals = useCallback(async () => {
     try {
@@ -66,27 +73,26 @@ export default function DealsScreen() {
     }
   };
 
-  const handlePurchase = async (deal: Deal) => {
-    Alert.prompt(
-      'Purchase Price',
-      'Enter the price you paid:',
-      async (price) => {
-        if (price) {
-          try {
-            await api.purchaseDeal(deal.id, {
-              buy_price: parseFloat(price),
-              buy_date: new Date().toISOString().split('T')[0],
-            });
-            Alert.alert('Success', 'Added to Current Flips');
-            loadDeals();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to record purchase');
-          }
-        }
-      },
-      'plain-text',
-      deal.asking_price?.toString()
-    );
+  const handlePurchase = (deal: Deal) => {
+    setPurchasePrice(deal.asking_price?.toString() || '');
+    setPurchaseModal({ visible: true, deal });
+  };
+
+  const confirmPurchase = async () => {
+    if (!purchaseModal.deal || !purchasePrice) return;
+
+    try {
+      await api.purchaseDeal(purchaseModal.deal.id, {
+        buy_price: parseFloat(purchasePrice),
+        buy_date: new Date().toISOString().split('T')[0],
+      });
+      Alert.alert('Success', 'Added to Current Flips');
+      setPurchaseModal({ visible: false, deal: null });
+      setPurchasePrice('');
+      loadDeals();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to record purchase');
+    }
   };
 
   const renderNeedsReviewItem = ({ item }: { item: Deal }) => (
@@ -95,7 +101,7 @@ export default function DealsScreen() {
         {item.title}
       </Text>
       <Text style={styles.reviewPrice}>
-        ${item.asking_price?.toFixed(2) || '?'}
+        ${Number(item.asking_price)?.toFixed(2) || '?'}
       </Text>
       <Text style={styles.reviewQuestion}>New or Used?</Text>
       <View style={styles.conditionButtons}>
@@ -116,10 +122,11 @@ export default function DealsScreen() {
   );
 
   const renderDealItem = ({ item }: { item: Deal }) => {
+    const profit = Number(item.estimated_profit) || 0;
     const profitColor =
-      (item.estimated_profit || 0) >= 50
+      profit >= 50
         ? '#4ecca3'
-        : (item.estimated_profit || 0) >= 30
+        : profit >= 30
         ? '#ffc107'
         : '#888';
 
@@ -134,17 +141,17 @@ export default function DealsScreen() {
           </Text>
           <View style={[styles.profitBadge, { backgroundColor: profitColor }]}>
             <Text style={styles.profitText}>
-              +${item.estimated_profit?.toFixed(0) || '?'}
+              +${Number(item.estimated_profit)?.toFixed(0) || '?'}
             </Text>
           </View>
         </View>
 
         <View style={styles.dealDetails}>
           <Text style={styles.dealPrice}>
-            Asking: ${item.asking_price?.toFixed(2) || '?'}
+            Asking: ${Number(item.asking_price)?.toFixed(2) || '?'}
           </Text>
           <Text style={styles.dealMarket}>
-            Market: ${item.market_value?.toFixed(2) || '?'}
+            Market: ${Number(item.market_value)?.toFixed(2) || '?'}
           </Text>
         </View>
 
@@ -213,6 +220,46 @@ export default function DealsScreen() {
           </View>
         }
       />
+
+      {/* Purchase Modal */}
+      <Modal
+        visible={purchaseModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPurchaseModal({ visible: false, deal: null })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Purchase Price</Text>
+            <Text style={styles.modalSubtitle} numberOfLines={2}>
+              {purchaseModal.deal?.title}
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={purchasePrice}
+              onChangeText={setPurchasePrice}
+              keyboardType="decimal-pad"
+              placeholder="Enter price paid"
+              placeholderTextColor="#666"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setPurchaseModal({ visible: false, deal: null })}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmPurchase}
+              >
+                <Text style={styles.modalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -367,6 +414,66 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     color: '#fff',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#0f0f1a',
+    borderRadius: 8,
+    padding: 16,
+    color: '#fff',
+    fontSize: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#333',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#4ecca3',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#000',
     fontWeight: '600',
   },
 });

@@ -32,8 +32,14 @@ def calculate_estimated_profit(
     if fee_percentage is None:
         fee_percentage = settings.ebay_fee_percentage
 
+    # Ensure Decimal types
+    if not isinstance(asking_price, Decimal):
+        asking_price = Decimal(str(asking_price))
+    if not isinstance(market_value, Decimal):
+        market_value = Decimal(str(market_value))
+
     # Calculate: sell_price - buy_price - fees - shipping
-    fees = market_value * Decimal(fee_percentage / 100)
+    fees = market_value * Decimal(str(fee_percentage / 100))
     profit = market_value - asking_price - fees - shipping_estimate
 
     return profit.quantize(Decimal("0.01"))

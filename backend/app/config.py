@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     gmail_token_file: str = "token.json"
     gmail_scopes: list[str] = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-    # Gemini AI
+    # AI Classification (OpenRouter)
+    openrouter_api_key: str = ""
+
+    # Gemini AI (legacy, not used)
     gemini_api_key: str = ""
 
     # eBay API
@@ -25,6 +28,7 @@ class Settings(BaseSettings):
 
     # Firebase
     firebase_credentials_file: str = "firebase-service-account.json"
+    firebase_project_id: str = ""
 
     # App settings
     profit_threshold: float = 30.0  # Minimum profit to notify

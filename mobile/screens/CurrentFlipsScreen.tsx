@@ -120,7 +120,7 @@ export default function CurrentFlipsScreen() {
   };
 
   const totalInventoryValue = flips.reduce(
-    (sum, f) => sum + f.buy_price,
+    (sum, f) => sum + (Number(f.buy_price) || 0),
     0
   );
 
@@ -138,7 +138,7 @@ export default function CurrentFlipsScreen() {
 
         <View style={styles.flipDetails}>
           <Text style={styles.buyPrice}>
-            Paid: ${item.buy_price.toFixed(2)}
+            Paid: ${Number(item.buy_price).toFixed(2)}
           </Text>
           <Text style={styles.source}>{item.buy_source || 'Unknown'}</Text>
         </View>

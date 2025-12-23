@@ -1,9 +1,9 @@
-"""Gemini Flash AI classifier for items."""
+"""AI classifier for items using OpenRouter."""
 
 import json
 from typing import Optional
 
-import google.generativeai as genai
+import httpx
 
 from ..config import get_settings
 from ..schemas import DealClassification
@@ -29,39 +29,16 @@ CRITICAL: For condition, only mark as "new" or "used" if it is EXPLICITLY stated
 If there's any ambiguity or the condition is not mentioned, use "unknown".
 Never guess the condition.
 
-Example input: "RTX 3080 graphics card barely used works great $400"
-Example output:
-{
-  "category": "electronics",
-  "subcategory": "gpu",
-  "brand": "NVIDIA",
-  "model": "RTX 3080",
-  "item_details": {"type": "graphics card"},
-  "condition": "used",
-  "condition_confidence": "explicit"
-}
-
-Example input: "iPhone 14 Pro 256GB $800"
-Example output:
-{
-  "category": "electronics",
-  "subcategory": "smartphone",
-  "brand": "Apple",
-  "model": "iPhone 14 Pro",
-  "item_details": {"storage": "256GB"},
-  "condition": "unknown",
-  "condition_confidence": "unclear"
-}
-"""
+Respond with JSON only, no markdown formatting."""
 
 
-class GeminiClassifier:
-    """Classifies items using Gemini Flash AI."""
+class AIClassifier:
+    """Classifies items using OpenRouter API."""
 
     def __init__(self):
-        if settings.gemini_api_key:
-            genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.api_key = settings.openrouter_api_key
+        self.base_url = "https://openrouter.ai/api/v1/chat/completions"
+        self.model = "google/gemini-2.0-flash-001"  # Fast and cheap
 
     async def classify(self, listing_text: str) -> Optional[DealClassification]:
         """
@@ -73,30 +50,54 @@ class GeminiClassifier:
         Returns:
             DealClassification with extracted fields, or None on error
         """
+        if not self.api_key:
+            print("OpenRouter API key not configured")
+            return None
+
         try:
-            prompt = f"{CLASSIFICATION_PROMPT}\n\nListing to analyze:\n{listing_text}\n\nRespond with JSON only:"
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.base_url,
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": [
+                            {"role": "system", "content": CLASSIFICATION_PROMPT},
+                            {"role": "user", "content": f"Listing to analyze:\n{listing_text}"},
+                        ],
+                        "temperature": 0.1,
+                    },
+                    timeout=30.0,
+                )
 
-            response = self.model.generate_content(prompt)
-            text = response.text.strip()
+                if response.status_code != 200:
+                    print(f"OpenRouter error: {response.status_code} - {response.text}")
+                    return None
 
-            # Extract JSON from response (handle markdown code blocks)
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            text = text.strip()
+                data = response.json()
+                text = data["choices"][0]["message"]["content"].strip()
 
-            data = json.loads(text)
+                # Extract JSON from response (handle markdown code blocks)
+                if text.startswith("```"):
+                    text = text.split("```")[1]
+                    if text.startswith("json"):
+                        text = text[4:]
+                text = text.strip()
 
-            return DealClassification(
-                category=data.get("category"),
-                subcategory=data.get("subcategory"),
-                brand=data.get("brand"),
-                model=data.get("model"),
-                item_details=data.get("item_details"),
-                condition=data.get("condition", "unknown"),
-                condition_confidence=data.get("condition_confidence", "unclear"),
-            )
+                result = json.loads(text)
+
+                return DealClassification(
+                    category=result.get("category"),
+                    subcategory=result.get("subcategory"),
+                    brand=result.get("brand"),
+                    model=result.get("model"),
+                    item_details=result.get("item_details"),
+                    condition=result.get("condition", "unknown"),
+                    condition_confidence=result.get("condition_confidence", "unclear"),
+                )
 
         except Exception as e:
             print(f"Error classifying item: {e}")
@@ -104,12 +105,12 @@ class GeminiClassifier:
 
 
 # Singleton instance
-_classifier: Optional[GeminiClassifier] = None
+_classifier: Optional[AIClassifier] = None
 
 
-def get_classifier() -> GeminiClassifier:
+def get_classifier() -> AIClassifier:
     """Get or create classifier instance."""
     global _classifier
     if _classifier is None:
-        _classifier = GeminiClassifier()
+        _classifier = AIClassifier()
     return _classifier

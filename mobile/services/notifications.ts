@@ -8,6 +8,8 @@ import { Platform } from 'react-native';
 import { api } from './api';
 
 export async function registerForPushNotifications(): Promise<string | null> {
+  // Push notifications don't work in Expo Go for SDK 53+
+  // Need a development build for full functionality
   if (!Device.isDevice) {
     console.log('Push notifications only work on physical devices');
     return null;
@@ -30,9 +32,17 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    // Get push token
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log('Push token:', token);
+    // Get push token - this fails in Expo Go for SDK 53+
+    let token: string;
+    try {
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: 'dealscout-88ed6',
+      })).data;
+      console.log('Push token:', token);
+    } catch (e) {
+      console.log('Push tokens not available in Expo Go (SDK 53+). Use a dev build.');
+      return null;
+    }
 
     // Register with backend
     try {
@@ -59,7 +69,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     return token;
   } catch (error) {
-    console.error('Error setting up push notifications:', error);
+    console.log('Push notifications not available:', error);
     return null;
   }
 }

@@ -3,7 +3,7 @@
  */
 
 // Configure this to your backend URL
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://dealscout.junipr.io';
 
 export interface Deal {
   id: number;
@@ -77,6 +77,7 @@ class ApiService {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...options.headers,
       },
     });

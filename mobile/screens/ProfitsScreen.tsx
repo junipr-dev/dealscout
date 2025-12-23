@@ -63,12 +63,13 @@ export default function ProfitsScreen() {
 
   const filteredFlips = getFilteredFlips();
   const filteredProfit = filteredFlips.reduce(
-    (sum, f) => sum + (f.profit || 0),
+    (sum, f) => sum + (Number(f.profit) || 0),
     0
   );
 
   const renderFlipItem = ({ item }: { item: Flip }) => {
-    const profitColor = (item.profit || 0) >= 0 ? '#4ecca3' : '#ff6b6b';
+    const profit = Number(item.profit) || 0;
+    const profitColor = profit >= 0 ? '#4ecca3' : '#ff6b6b';
 
     return (
       <View style={styles.flipCard}>
@@ -77,26 +78,26 @@ export default function ProfitsScreen() {
             {item.item_name}
           </Text>
           <Text style={[styles.profit, { color: profitColor }]}>
-            {(item.profit || 0) >= 0 ? '+' : ''}${item.profit?.toFixed(2) || '0'}
+            {profit >= 0 ? '+' : ''}${profit.toFixed(2)}
           </Text>
         </View>
 
         <View style={styles.flipDetails}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Bought:</Text>
-            <Text style={styles.detailValue}>${item.buy_price.toFixed(2)}</Text>
+            <Text style={styles.detailValue}>${Number(item.buy_price).toFixed(2)}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Sold:</Text>
             <Text style={styles.detailValue}>
-              ${item.sell_price?.toFixed(2) || '0'}
+              ${Number(item.sell_price).toFixed(2) || '0'}
             </Text>
           </View>
-          {item.fees_paid > 0 && (
+          {Number(item.fees_paid) > 0 && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Fees:</Text>
               <Text style={styles.detailValue}>
-                -${item.fees_paid.toFixed(2)}
+                -${Number(item.fees_paid).toFixed(2)}
               </Text>
             </View>
           )}
@@ -125,7 +126,7 @@ export default function ProfitsScreen() {
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Total Profit</Text>
           <Text style={styles.statValue}>
-            ${stats?.overall.total_profit.toFixed(2) || '0'}
+            ${Number(stats?.overall.total_profit || 0).toFixed(2)}
           </Text>
         </View>
         <View style={styles.statBox}>
@@ -137,7 +138,7 @@ export default function ProfitsScreen() {
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>Avg Profit</Text>
           <Text style={styles.statValue}>
-            ${stats?.overall.avg_profit_per_flip.toFixed(2) || '0'}
+            ${Number(stats?.overall.avg_profit_per_flip || 0).toFixed(2)}
           </Text>
         </View>
       </View>
