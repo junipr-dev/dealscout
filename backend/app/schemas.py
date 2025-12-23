@@ -24,14 +24,37 @@ class DealCreate(DealBase):
 
 
 class DealClassification(BaseModel):
-    """AI classification result - works for any item type."""
+    """AI classification result - enhanced with repair/bundle/variant detection."""
     category: Optional[str] = None  # electronics, furniture, clothing, vehicles, etc.
     subcategory: Optional[str] = None  # gpu, couch, jacket, truck, etc.
     brand: Optional[str] = None
     model: Optional[str] = None
     item_details: Optional[dict] = None  # flexible attributes
-    condition: Optional[str] = None  # new, used, unknown
+    condition: Optional[str] = None  # new, used, needs_repair, unknown
     condition_confidence: Optional[str] = None  # explicit, unclear
+
+    # Repair detection
+    repair_needed: Optional[bool] = None
+    repair_keywords: Optional[list[str]] = None  # as-is, broken, for parts, etc.
+    repair_feasibility: Optional[str] = None  # easy/moderate/difficult/professional
+    repair_notes: Optional[str] = None  # AI description of repairs needed
+    repair_part_needed: Optional[str] = None  # "iPhone 14 Pro Max screen"
+
+    # Enhanced classification
+    part_numbers: Optional[list[str]] = None  # Extracted SKUs, MPNs
+    variants: Optional[str] = None  # "Disc Edition", "512GB", etc.
+    is_bundle: Optional[bool] = None
+    bundle_items: Optional[list[str]] = None  # List of items in bundle
+    accessory_completeness: Optional[str] = None  # "complete", "missing controller"
+
+    # Image intelligence
+    has_product_photos: Optional[bool] = None
+    photo_quality: Optional[str] = None  # good/fair/poor/none
+
+    # Seller intelligence
+    seller_username: Optional[str] = None
+    seller_rating: Optional[str] = None
+    seller_reputation: Optional[str] = None
 
 
 class DealPricing(BaseModel):
@@ -42,7 +65,7 @@ class DealPricing(BaseModel):
 
 
 class DealResponse(DealBase):
-    """Full deal response."""
+    """Full deal response with AI enhancements."""
     id: int
     image_urls: Optional[list[str]] = None  # Multiple images for carousel
     category: Optional[str] = None
@@ -50,7 +73,7 @@ class DealResponse(DealBase):
     brand: Optional[str] = None
     model: Optional[str] = None
     item_details: Optional[dict] = None
-    condition: Optional[str] = None
+    condition: Optional[str] = None  # new, used, needs_repair, unknown
     condition_confidence: Optional[str] = None
     market_value: Optional[Decimal] = None
     estimated_profit: Optional[Decimal] = None
@@ -59,6 +82,49 @@ class DealResponse(DealBase):
     price_note: Optional[str] = None  # Explanation for user
     local_pickup_available: Optional[bool] = None  # True if local pickup within 100mi
     distance_miles: Optional[int] = None  # Distance from home location
+
+    # Repair intelligence
+    repair_needed: Optional[bool] = None
+    repair_keywords: Optional[list[str]] = None
+    repair_feasibility: Optional[str] = None  # easy/moderate/difficult/professional
+    repair_notes: Optional[str] = None
+
+    # Smart repair cost (with eBay parts lookup)
+    repair_part_needed: Optional[str] = None  # "iPhone 14 Pro Max screen"
+    repair_part_cost: Optional[Decimal] = None
+    repair_part_url: Optional[str] = None  # Clickable eBay link to part
+    repair_labor_estimate: Optional[Decimal] = None
+    repair_total_estimate: Optional[Decimal] = None  # part + labor
+    true_profit: Optional[Decimal] = None  # profit - repair_total
+
+    # Enhanced classification
+    part_numbers: Optional[list[str]] = None  # Extracted SKUs, MPNs
+    variants: Optional[str] = None  # "Disc Edition", "512GB", etc.
+    is_bundle: Optional[bool] = None
+    bundle_items: Optional[list[str]] = None
+    bundle_value_per_item: Optional[Decimal] = None
+    accessory_completeness: Optional[str] = None
+
+    # Deal scoring
+    deal_score: Optional[int] = None  # 0-100
+    flip_speed_prediction: Optional[str] = None  # fast/medium/slow
+    demand_indicator: Optional[str] = None  # high/medium/low
+    risk_level: Optional[str] = None  # low/medium/high
+    effort_level: Optional[str] = None  # low/medium/high
+
+    # Price intelligence
+    price_trend: Optional[str] = None  # up/down/stable
+    price_trend_note: Optional[str] = None
+
+    # Image intelligence
+    has_product_photos: Optional[bool] = None
+    photo_quality: Optional[str] = None  # good/fair/poor/none
+
+    # Seller intelligence
+    seller_username: Optional[str] = None
+    seller_rating: Optional[str] = None
+    seller_reputation: Optional[str] = None
+
     status: str
     created_at: datetime
     notified_at: Optional[datetime] = None
@@ -68,7 +134,7 @@ class DealResponse(DealBase):
 
 class DealConditionUpdate(BaseModel):
     """Update condition for a deal."""
-    condition: str  # new or used
+    condition: str  # new, used, or needs_repair
 
 
 class DealMarketValueUpdate(BaseModel):

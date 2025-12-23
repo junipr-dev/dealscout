@@ -48,7 +48,7 @@ class Deal(Base):
     item_details: Mapped[Optional[dict]] = mapped_column(JSON)  # flexible specs/attributes
 
     # Condition detection
-    condition: Mapped[Optional[str]] = mapped_column(String(20))  # new, used, unknown
+    condition: Mapped[Optional[str]] = mapped_column(String(20))  # new, used, needs_repair, unknown
     condition_confidence: Mapped[Optional[str]] = mapped_column(String(20))  # explicit, unclear
 
     # Price analysis
@@ -62,6 +62,48 @@ class Deal(Base):
     # Local pickup availability (for eBay and platforms that support it)
     local_pickup_available: Mapped[Optional[bool]] = mapped_column(default=None)
     distance_miles: Mapped[Optional[int]] = mapped_column(default=None)  # Distance from home
+
+    # Repair intelligence
+    repair_needed: Mapped[Optional[bool]] = mapped_column(default=None)
+    repair_keywords: Mapped[Optional[list]] = mapped_column(JSON)  # Keywords found: "broken", "as-is", etc.
+    repair_feasibility: Mapped[Optional[str]] = mapped_column(String(20))  # easy/moderate/difficult/professional
+    repair_notes: Mapped[Optional[str]] = mapped_column(Text)  # AI description of repairs needed
+
+    # Smart repair cost (with eBay parts lookup)
+    repair_part_needed: Mapped[Optional[str]] = mapped_column(String(200))  # "iPhone 14 Pro Max screen"
+    repair_part_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    repair_part_url: Mapped[Optional[str]] = mapped_column(Text)  # Clickable eBay link to part
+    repair_labor_estimate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    repair_total_estimate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))  # part + labor
+    true_profit: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))  # profit - repair_total
+
+    # Enhanced classification
+    part_numbers: Mapped[Optional[list]] = mapped_column(JSON)  # Extracted SKUs, MPNs
+    variants: Mapped[Optional[str]] = mapped_column(String(200))  # "Disc Edition", "512GB", etc.
+    is_bundle: Mapped[Optional[bool]] = mapped_column(default=None)
+    bundle_items: Mapped[Optional[list]] = mapped_column(JSON)  # List of items in bundle
+    bundle_value_per_item: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
+    accessory_completeness: Mapped[Optional[str]] = mapped_column(String(100))  # "complete", "missing controller"
+
+    # Deal scoring
+    deal_score: Mapped[Optional[int]] = mapped_column(default=None)  # 0-100
+    flip_speed_prediction: Mapped[Optional[str]] = mapped_column(String(20))  # fast/medium/slow
+    demand_indicator: Mapped[Optional[str]] = mapped_column(String(20))  # high/medium/low
+    risk_level: Mapped[Optional[str]] = mapped_column(String(20))  # low/medium/high
+    effort_level: Mapped[Optional[str]] = mapped_column(String(20))  # low/medium/high
+
+    # Price intelligence
+    price_trend: Mapped[Optional[str]] = mapped_column(String(20))  # up/down/stable
+    price_trend_note: Mapped[Optional[str]] = mapped_column(String(200))
+
+    # Image intelligence
+    has_product_photos: Mapped[Optional[bool]] = mapped_column(default=None)
+    photo_quality: Mapped[Optional[str]] = mapped_column(String(20))  # good/fair/poor/none
+
+    # Seller intelligence
+    seller_username: Mapped[Optional[str]] = mapped_column(String(100))
+    seller_rating: Mapped[Optional[str]] = mapped_column(String(50))
+    seller_reputation: Mapped[Optional[str]] = mapped_column(String(50))  # excellent/good/fair/poor
 
     # Status
     status: Mapped[str] = mapped_column(String(20), default="new")
