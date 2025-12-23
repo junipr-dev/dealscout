@@ -341,6 +341,15 @@ export default function DealsScreen() {
     const isFacebookOnly = ebayProfit <= 0 && facebookProfit > 0;
     const canPurchase = item.condition !== 'unknown' && item.market_value != null;
 
+    // Get distance - prefer backend value, fallback to frontend calculation
+    const distance = item.distance_miles ?? (item.location ? Math.round(getDistanceFromHome(item.location) || 0) : null);
+    const isWithinPickupRange = distance !== null && distance <= LOCAL_RADIUS_MILES;
+
+    // eBay local pickup badge - only show for eBay items within 100mi with pickup available
+    const showEbayPickupBadge = item.source?.toLowerCase() === 'ebay' &&
+                                 item.local_pickup_available === true &&
+                                 isWithinPickupRange;
+
     // Blue only for FB-only deals, green otherwise
     const profitColor = isFacebookOnly
       ? '#1877F2' // Facebook blue
@@ -399,6 +408,14 @@ export default function DealsScreen() {
               {item.condition || '?'}
             </Text>
             <Text style={styles.metaText}>{item.category || ''}</Text>
+            {isWithinPickupRange && distance !== null && (
+              <Text style={styles.distanceText}>{distance} mi</Text>
+            )}
+            {showEbayPickupBadge && (
+              <View style={styles.pickupBadge}>
+                <Text style={styles.pickupBadgeText}>Local Pickup</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.dealActions}>
@@ -771,6 +788,22 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  distanceText: {
+    color: '#4ecca3',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pickupBadge: {
+    backgroundColor: '#4ecca3',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  pickupBadgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   dealActions: {
     flexDirection: 'row',

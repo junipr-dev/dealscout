@@ -13,9 +13,10 @@ from .database import async_session
 from .models import Deal, DeviceToken
 from .services.email_ingestion import get_email_service
 from .services.gemini_classifier import get_classifier
-from .services.ebay_lookup import get_market_value
+from .services.ebay_lookup import get_market_value, check_local_pickup_available
 from .services.profit_calculator import calculate_estimated_profit, is_profitable_deal
 from .services.notifications import get_notification_service
+from .services.location import calculate_distance_from_home, is_within_pickup_range, LOCAL_RADIUS_MILES
 
 settings = get_settings()
 scheduler = AsyncIOScheduler()
@@ -64,6 +65,11 @@ async def process_new_emails() -> None:
                     source=raw_deal.get("source"),
                     location=raw_deal.get("location"),
                 )
+
+                # Calculate distance from home for all deals
+                if deal.location:
+                    deal.distance_miles = calculate_distance_from_home(deal.location)
+
                 db.add(deal)
                 await db.flush()  # Get the ID
 
@@ -104,6 +110,22 @@ async def process_new_emails() -> None:
                                             estimated_profit=float(deal.estimated_profit or 0),
                                             deal_id=deal.id,
                                         )
+
+                            # For eBay source deals within 100mi, check local pickup availability
+                            if deal.source and deal.source.lower() == "ebay":
+                                # Only check pickup if within reasonable range
+                                if deal.distance_miles is None or deal.distance_miles <= LOCAL_RADIUS_MILES:
+                                    try:
+                                        pickup_result = await check_local_pickup_available(
+                                            search_term, classification.condition
+                                        )
+                                        if pickup_result and pickup_result.get("found"):
+                                            deal.local_pickup_available = True
+                                        else:
+                                            deal.local_pickup_available = False
+                                    except Exception as e:
+                                        print(f"Error checking eBay local pickup: {e}")
+                                        deal.local_pickup_available = None
 
             await db.commit()
             print(f"[{datetime.now()}] Processed {len(raw_deals)} emails")
