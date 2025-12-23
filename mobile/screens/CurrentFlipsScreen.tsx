@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,23 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
+  Image,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { api, Flip } from '../services/api';
 
 export default function CurrentFlipsScreen() {
   const [flips, setFlips] = useState<Flip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sellModal, setSellModal] = useState<{ visible: boolean; flip: Flip | null }>({
+    visible: false,
+    flip: null,
+  });
+  const [sellPrice, setSellPrice] = useState('');
+  const [sellPlatform, setSellPlatform] = useState<string | null>(null);
 
   const loadFlips = useCallback(async () => {
     try {
@@ -27,9 +37,12 @@ export default function CurrentFlipsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadFlips();
-  }, [loadFlips]);
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadFlips();
+    }, [loadFlips])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -43,54 +56,31 @@ export default function CurrentFlipsScreen() {
   };
 
   const handleSell = (flip: Flip) => {
-    Alert.prompt(
-      'Sell Price',
-      'Enter the price you sold it for:',
-      async (price) => {
-        if (price) {
-          Alert.alert(
-            'Sell Platform',
-            'Where did you sell it?',
-            [
-              {
-                text: 'eBay',
-                onPress: () => completeSale(flip, parseFloat(price), 'ebay'),
-              },
-              {
-                text: 'Local',
-                onPress: () => completeSale(flip, parseFloat(price), 'local'),
-              },
-              {
-                text: 'Facebook',
-                onPress: () => completeSale(flip, parseFloat(price), 'facebook'),
-              },
-              { text: 'Cancel', style: 'cancel' },
-            ]
-          );
-        }
-      },
-      'plain-text'
-    );
+    setSellPrice('');
+    setSellPlatform(null);
+    setSellModal({ visible: true, flip });
   };
 
-  const completeSale = async (
-    flip: Flip,
-    sellPrice: number,
-    platform: string
-  ) => {
+  const confirmSell = async () => {
+    if (!sellModal.flip || !sellPrice || !sellPlatform) return;
+
     try {
       // Calculate fees (eBay ~13%, others 0)
-      const fees = platform === 'ebay' ? sellPrice * 0.13 : 0;
+      const price = parseFloat(sellPrice);
+      const fees = sellPlatform === 'ebay' ? price * 0.13 : 0;
 
-      await api.sellFlip(flip.id, {
-        sell_price: sellPrice,
+      await api.sellFlip(sellModal.flip.id, {
+        sell_price: price,
         sell_date: new Date().toISOString().split('T')[0],
-        sell_platform: platform,
+        sell_platform: sellPlatform,
         fees_paid: fees,
         shipping_cost: 0,
       });
 
       Alert.alert('Success', 'Sale recorded! Check Profits tab.');
+      setSellModal({ visible: false, flip: null });
+      setSellPrice('');
+      setSellPlatform(null);
       loadFlips();
     } catch (error) {
       Alert.alert('Error', 'Failed to record sale');
@@ -130,17 +120,30 @@ export default function CurrentFlipsScreen() {
     return (
       <View style={styles.flipCard}>
         <View style={styles.flipHeader}>
-          <Text style={styles.flipTitle} numberOfLines={2}>
-            {item.item_name}
-          </Text>
+          {/* Thumbnail */}
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.thumbnailPlaceholder}>
+              <Text style={styles.thumbnailPlaceholderText}>📦</Text>
+            </View>
+          )}
+          <View style={styles.flipHeaderText}>
+            <Text style={styles.flipTitle} numberOfLines={2}>
+              {item.item_name}
+            </Text>
+            <View style={styles.flipDetails}>
+              <Text style={styles.buyPrice}>
+                Paid: ${Number(item.buy_price).toFixed(2)}
+              </Text>
+              <Text style={styles.source}>{item.buy_source || 'Unknown'}</Text>
+            </View>
+          </View>
           <Text style={styles.daysHeld}>{daysHeld}d</Text>
-        </View>
-
-        <View style={styles.flipDetails}>
-          <Text style={styles.buyPrice}>
-            Paid: ${Number(item.buy_price).toFixed(2)}
-          </Text>
-          <Text style={styles.source}>{item.buy_source || 'Unknown'}</Text>
         </View>
 
         {item.category && (
@@ -199,6 +202,75 @@ export default function CurrentFlipsScreen() {
           </View>
         }
       />
+
+      {/* Sell Modal */}
+      <Modal
+        visible={sellModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSellModal({ visible: false, flip: null })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Mark as Sold</Text>
+            <Text style={styles.modalSubtitle} numberOfLines={2}>
+              {sellModal.flip?.item_name}
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              value={sellPrice}
+              onChangeText={setSellPrice}
+              keyboardType="decimal-pad"
+              placeholder="Enter sell price"
+              placeholderTextColor="#666"
+              autoFocus
+            />
+
+            <Text style={styles.platformLabel}>Where did you sell it?</Text>
+            <View style={styles.platformButtons}>
+              {['ebay', 'facebook'].map((platform) => (
+                <TouchableOpacity
+                  key={platform}
+                  style={[
+                    styles.platformBtn,
+                    sellPlatform === platform && styles.platformBtnActive,
+                  ]}
+                  onPress={() => setSellPlatform(platform)}
+                >
+                  <Text
+                    style={[
+                      styles.platformBtnText,
+                      sellPlatform === platform && styles.platformBtnTextActive,
+                    ]}
+                  >
+                    {platform === 'ebay' ? 'eBay' : platform.charAt(0).toUpperCase() + platform.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setSellModal({ visible: false, flip: null })}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmBtn,
+                  (!sellPrice || !sellPlatform) && styles.modalConfirmBtnDisabled,
+                ]}
+                onPress={confirmSell}
+                disabled={!sellPrice || !sellPlatform}
+              >
+                <Text style={styles.modalConfirmText}>Confirm Sale</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -262,12 +334,33 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  thumbnailPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailPlaceholderText: {
+    fontSize: 20,
+  },
+  flipHeaderText: {
+    flex: 1,
+    marginRight: 12,
+  },
   flipTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    marginRight: 12,
+    marginBottom: 4,
   },
   daysHeld: {
     color: '#888',
@@ -279,8 +372,7 @@ const styles = StyleSheet.create({
   },
   flipDetails: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 8,
   },
   buyPrice: {
     color: '#fff',
@@ -322,5 +414,96 @@ const styles = StyleSheet.create({
   sellBtnText: {
     color: '#000',
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#0f0f1a',
+    borderRadius: 8,
+    padding: 16,
+    color: '#fff',
+    fontSize: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  platformLabel: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  platformButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  platformBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#333',
+    alignItems: 'center',
+  },
+  platformBtnActive: {
+    backgroundColor: '#4ecca3',
+  },
+  platformBtnText: {
+    color: '#888',
+    fontWeight: '600',
+  },
+  platformBtnTextActive: {
+    color: '#000',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#333',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    backgroundColor: '#4ecca3',
+    alignItems: 'center',
+  },
+  modalConfirmBtnDisabled: {
+    backgroundColor: '#333',
+    opacity: 0.5,
+  },
+  modalConfirmText: {
+    color: '#000',
+    fontWeight: '600',
   },
 });

@@ -13,6 +13,7 @@ class DealBase(BaseModel):
     title: str
     asking_price: Optional[Decimal] = None
     listing_url: Optional[str] = None
+    image_url: Optional[str] = None
     source: Optional[str] = None
     location: Optional[str] = None
 
@@ -43,6 +44,7 @@ class DealPricing(BaseModel):
 class DealResponse(DealBase):
     """Full deal response."""
     id: int
+    image_urls: Optional[list[str]] = None  # Multiple images for carousel
     category: Optional[str] = None
     subcategory: Optional[str] = None
     brand: Optional[str] = None
@@ -53,6 +55,8 @@ class DealResponse(DealBase):
     market_value: Optional[Decimal] = None
     estimated_profit: Optional[Decimal] = None
     ebay_sold_data: Optional[dict] = None
+    price_status: Optional[str] = None  # accurate, similar_prices, no_data, mock_data, user_set
+    price_note: Optional[str] = None  # Explanation for user
     status: str
     created_at: datetime
     notified_at: Optional[datetime] = None
@@ -65,11 +69,17 @@ class DealConditionUpdate(BaseModel):
     condition: str  # new or used
 
 
+class DealMarketValueUpdate(BaseModel):
+    """Manually set market value for a deal."""
+    market_value: Decimal
+
+
 # ============ Flip Schemas ============
 
 class FlipBase(BaseModel):
     """Base flip schema."""
     item_name: str
+    image_url: Optional[str] = None
     category: Optional[str] = None
     buy_price: Decimal
     buy_date: date

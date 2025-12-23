@@ -146,6 +146,7 @@ class EmailIngestionService:
             "title": "",
             "asking_price": None,
             "listing_url": None,
+            "image_url": None,
             "source": None,
             "location": None,
         }
@@ -166,6 +167,11 @@ class EmailIngestionService:
         url_match = re.search(r"(https?://[^\s<>\"']+)", body)
         if url_match:
             deal["listing_url"] = url_match.group(1)
+
+        # Extract image URL (common image extensions)
+        image_match = re.search(r"(https?://[^\s<>\"']+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s<>\"']*)?)", body, re.I)
+        if image_match:
+            deal["image_url"] = image_match.group(1)
 
         # Detect source from URL or text
         if "facebook" in body.lower() or "fb.com" in (deal["listing_url"] or "").lower():

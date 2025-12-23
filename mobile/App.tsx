@@ -2,16 +2,21 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Text, View, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 
 import DealsScreen from './screens/DealsScreen';
+import DealDetailScreen from './screens/DealDetailScreen';
 import CurrentFlipsScreen from './screens/CurrentFlipsScreen';
 import ProfitsScreen from './screens/ProfitsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { registerForPushNotifications } from './services/notifications';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 // Configure notification handling
 Notifications.setNotificationHandler({
@@ -21,6 +26,33 @@ Notifications.setNotificationHandler({
     shouldSetBadge: true,
   }),
 });
+
+// Get status bar height for Android
+const statusBarHeight = Constants.statusBarHeight || 0;
+
+// Deals stack with detail screen
+function DealsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#1a1a2e' },
+        headerTintColor: '#fff',
+        headerStatusBarHeight: statusBarHeight,
+      }}
+    >
+      <Stack.Screen
+        name="DealsList"
+        component={DealsScreen}
+        options={{ title: 'Deals' }}
+      />
+      <Stack.Screen
+        name="DealDetail"
+        component={DealDetailScreen}
+        options={{ title: 'Deal Details' }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   useEffect(() => {
@@ -40,9 +72,10 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Tab.Navigator
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <Tab.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: '#1a1a2e' },
           headerTintColor: '#fff',
@@ -53,8 +86,9 @@ export default function App() {
       >
         <Tab.Screen
           name="Deals"
-          component={DealsScreen}
+          component={DealsStack}
           options={{
+            headerShown: false,
             tabBarIcon: ({ color }) => <TabIcon name="$" color={color} />,
           }}
         />
@@ -69,7 +103,7 @@ export default function App() {
           name="Profits"
           component={ProfitsScreen}
           options={{
-            tabBarIcon: ({ color }) => <TabIcon name="📊" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon name="↗" color={color} />,
           }}
         />
         <Tab.Screen
@@ -79,8 +113,9 @@ export default function App() {
             tabBarIcon: ({ color }) => <TabIcon name="⚙" color={color} />,
           }}
         />
-      </Tab.Navigator>
-    </NavigationContainer>
+        </Tab.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 

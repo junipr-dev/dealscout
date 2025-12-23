@@ -10,6 +10,8 @@ export interface Deal {
   title: string;
   asking_price: number | null;
   listing_url: string | null;
+  image_url: string | null;
+  image_urls: string[] | null;
   source: string | null;
   location: string | null;
   category: string | null;
@@ -20,6 +22,8 @@ export interface Deal {
   condition_confidence: string | null;
   market_value: number | null;
   estimated_profit: number | null;
+  price_status: string | null; // accurate, similar_prices, limited_data, no_data, mock_data, user_set
+  price_note: string | null;
   status: string;
   created_at: string;
 }
@@ -28,6 +32,7 @@ export interface Flip {
   id: number;
   deal_id: number | null;
   item_name: string;
+  image_url: string | null;
   category: string | null;
   buy_price: number;
   buy_date: string;
@@ -128,6 +133,13 @@ class ApiService {
     return this.request(`/deals/${id}/purchase`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async updateMarketValue(id: number, marketValue: number): Promise<Deal> {
+    return this.request(`/deals/${id}/market-value`, {
+      method: 'POST',
+      body: JSON.stringify({ market_value: marketValue }),
     });
   }
 
@@ -232,6 +244,39 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ token }),
     });
+  }
+
+  // eBay account integration
+  async getEbayStatus(): Promise<{
+    linked: boolean;
+    auth_url?: string;
+    username?: string;
+    store_tier?: string;
+    fee_percentage?: number;
+    token_valid?: boolean;
+    last_updated?: string;
+  }> {
+    return this.request('/ebay/status');
+  }
+
+  async getEbayAuthUrl(): Promise<{ auth_url: string }> {
+    return this.request('/ebay/auth');
+  }
+
+  async refreshEbayInfo(): Promise<{
+    linked: boolean;
+    store_tier?: string;
+    fee_percentage?: number;
+  }> {
+    return this.request('/ebay/refresh', { method: 'POST' });
+  }
+
+  async unlinkEbayAccount(): Promise<{ success: boolean; message: string }> {
+    return this.request('/ebay/unlink', { method: 'DELETE' });
+  }
+
+  async getEbayFee(): Promise<{ fee_percentage: number }> {
+    return this.request('/ebay/fee');
   }
 }
 

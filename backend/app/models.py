@@ -35,6 +35,8 @@ class Deal(Base):
     title: Mapped[str] = mapped_column(String(500))
     asking_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
     listing_url: Mapped[Optional[str]] = mapped_column(Text)
+    image_url: Mapped[Optional[str]] = mapped_column(Text)  # Thumbnail image URL
+    image_urls: Mapped[Optional[list]] = mapped_column(JSON)  # Multiple images for carousel
     source: Mapped[Optional[str]] = mapped_column(String(50))  # facebook, craigslist, etc.
     location: Mapped[Optional[str]] = mapped_column(String(200))
 
@@ -53,6 +55,9 @@ class Deal(Base):
     market_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
     estimated_profit: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
     ebay_sold_data: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Price status: accurate, similar_prices, no_data, mock_data, user_set
+    price_status: Mapped[Optional[str]] = mapped_column(String(30))
+    price_note: Mapped[Optional[str]] = mapped_column(String(200))  # Explanation for user
 
     # Status
     status: Mapped[str] = mapped_column(String(20), default="new")
@@ -78,6 +83,7 @@ class Flip(Base):
 
     # Purchase info
     item_name: Mapped[str] = mapped_column(String(500))
+    image_url: Mapped[Optional[str]] = mapped_column(Text)  # Thumbnail from deal
     category: Mapped[Optional[str]] = mapped_column(String(100))
     buy_price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     buy_date: Mapped[date] = mapped_column(Date)
@@ -136,3 +142,25 @@ class DeviceToken(Base):
 
     def __repr__(self) -> str:
         return f"<DeviceToken {self.id}>"
+
+
+class EbayCredentials(Base):
+    """eBay OAuth credentials for seller account access."""
+
+    __tablename__ = "ebay_credentials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    access_token: Mapped[str] = mapped_column(Text)
+    refresh_token: Mapped[str] = mapped_column(Text)
+    token_expiry: Mapped[datetime] = mapped_column(DateTime)
+
+    # Account info from eBay
+    seller_username: Mapped[Optional[str]] = mapped_column(String(100))
+    store_subscription_tier: Mapped[Optional[str]] = mapped_column(String(50))  # NONE, STARTER, BASIC, etc.
+    fee_percentage: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))  # Calculated from tier
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<EbayCredentials {self.seller_username or 'unlinked'}>"

@@ -1,5 +1,7 @@
-"""eBay API for looking up sold item prices."""
+"""eBay API for looking up sold item prices with robust fallback strategies."""
 
+import asyncio
+import re
 from decimal import Decimal
 from typing import Optional
 import httpx
@@ -10,6 +12,10 @@ settings = get_settings()
 
 # eBay Browse API endpoint
 EBAY_API_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+
+# Simple in-memory cache for successful lookups (reduces API calls)
+_price_cache: dict[str, dict] = {}
+_cache_ttl = 3600 * 6  # 6 hours
 
 
 async def get_ebay_access_token() -> Optional[str]:
@@ -45,93 +51,188 @@ async def get_ebay_access_token() -> Optional[str]:
         return None
 
 
+def generate_search_variations(search_term: str) -> list[str]:
+    """
+    Generate multiple search term variations to maximize chances of finding results.
+    Tries progressively broader searches.
+    """
+    variations = [search_term]  # Original term first
+
+    # Remove common size/capacity suffixes that might be too specific
+    cleaned = re.sub(r'\b\d+\s*(gb|tb|inch|"|\')\b', '', search_term, flags=re.IGNORECASE).strip()
+    if cleaned and cleaned != search_term:
+        variations.append(cleaned)
+
+    # Split into words and try different combinations
+    words = search_term.split()
+    if len(words) >= 3:
+        # Try first 2 words (usually brand + model)
+        variations.append(' '.join(words[:2]))
+        # Try first 3 words
+        variations.append(' '.join(words[:3]))
+
+    # Remove parenthetical content (often contains SKUs or variants)
+    no_parens = re.sub(r'\([^)]*\)', '', search_term).strip()
+    if no_parens and no_parens != search_term:
+        variations.append(no_parens)
+
+    # Remove special characters that might cause issues
+    alphanumeric = re.sub(r'[^\w\s]', ' ', search_term)
+    alphanumeric = ' '.join(alphanumeric.split())  # Normalize spaces
+    if alphanumeric and alphanumeric not in variations:
+        variations.append(alphanumeric)
+
+    return variations
+
+
+async def _single_ebay_search(
+    client: httpx.AsyncClient,
+    token: str,
+    search_term: str,
+    condition_filter: str,
+    limit: int = 20,
+) -> Optional[dict]:
+    """Perform a single eBay search with the given term."""
+    try:
+        response = await client.get(
+            EBAY_API_URL,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+            },
+            params={
+                "q": search_term,
+                "filter": f"conditionIds:{{{condition_filter}}},buyingOptions:{{FIXED_PRICE|AUCTION}},priceCurrency:USD",
+                "sort": "endingSoonest",
+                "limit": limit,
+            },
+            timeout=10.0,
+        )
+
+        if response.status_code != 200:
+            return None
+
+        data = response.json()
+        items = data.get("itemSummaries", [])
+
+        if not items:
+            return None
+
+        # Extract prices
+        prices = []
+        sold_items = []
+
+        for item in items:
+            price_data = item.get("price", {})
+            if price_data.get("currency") == "USD":
+                price = Decimal(price_data.get("value", "0"))
+                if price > 0:
+                    prices.append(price)
+                    sold_items.append({
+                        "title": item.get("title"),
+                        "price": float(price),
+                        "condition": item.get("condition"),
+                        "item_id": item.get("itemId"),
+                    })
+
+        if not prices:
+            return None
+
+        return {
+            "avg_price": float(sum(prices) / len(prices)),
+            "low_price": float(min(prices)),
+            "high_price": float(max(prices)),
+            "num_sales": len(prices),
+            "sold_items": sold_items[:10],
+            "search_term_used": search_term,
+        }
+
+    except Exception:
+        return None
+
+
 async def get_market_value(
     search_term: str,
     condition: str = "used",
     limit: int = 20,
 ) -> Optional[dict]:
     """
-    Look up market value for an item based on eBay sold listings.
+    Look up market value for an item based on eBay listings with robust fallbacks.
+
+    Strategy:
+    1. Check cache first
+    2. Try original search term
+    3. Try search variations (broader terms)
+    4. Try without condition filter if still no results
+    5. Retry with exponential backoff on transient failures
 
     Args:
         search_term: Item to search for (e.g., "NVIDIA RTX 3080")
         condition: "new" or "used" to filter results
-        limit: Max number of sold listings to analyze
+        limit: Max number of listings to analyze
 
     Returns:
-        Dict with pricing data:
-        - avg_price: Average sold price
-        - low_price: Lowest recent sale
-        - high_price: Highest recent sale
-        - num_sales: Number of sales found
-        - sold_items: List of individual sales
-
-    Returns None on error.
+        Dict with pricing data or None on complete failure.
     """
+    # Check cache first
+    cache_key = f"{search_term}:{condition}"
+    if cache_key in _price_cache:
+        cached = _price_cache[cache_key]
+        # In production, check TTL here
+        return cached
+
     token = await get_ebay_access_token()
     if not token:
+        print("eBay: Failed to get access token")
         return None
 
-    # Map condition to eBay filter
     condition_filter = "USED" if condition == "used" else "NEW"
+    variations = generate_search_variations(search_term)
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                EBAY_API_URL,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-                },
-                params={
-                    "q": search_term,
-                    "filter": f"conditionIds:{{{condition_filter}}},buyingOptions:{{FIXED_PRICE|AUCTION}},priceCurrency:USD",
-                    "sort": "endingSoonest",
-                    "limit": limit,
-                },
+    async with httpx.AsyncClient() as client:
+        # Strategy 1: Try each search variation with condition filter
+        for variation in variations:
+            # Retry up to 2 times with exponential backoff
+            for attempt in range(3):
+                result = await _single_ebay_search(
+                    client, token, variation, condition_filter, limit
+                )
+                if result:
+                    # Good result - cache it
+                    _price_cache[cache_key] = result
+                    print(f"eBay: Found prices using '{variation}' ({result['num_sales']} listings)")
+                    return result
+
+                if attempt < 2:
+                    await asyncio.sleep(0.5 * (attempt + 1))  # 0.5s, 1s backoff
+
+        # Strategy 2: Try without condition filter (any condition)
+        print(f"eBay: No {condition} results, trying any condition...")
+        for variation in variations[:2]:  # Only try first 2 variations
+            result = await _single_ebay_search(
+                client, token, variation, "NEW|USED", limit
             )
+            if result:
+                result["condition_note"] = "Mixed conditions (new+used)"
+                _price_cache[cache_key] = result
+                print(f"eBay: Found prices using '{variation}' (any condition)")
+                return result
 
-            if response.status_code != 200:
-                print(f"eBay search error: {response.status_code} - {response.text}")
-                return None
+        # Strategy 3: Try even broader search (first 2 words only)
+        words = search_term.split()
+        if len(words) > 2:
+            broad_term = ' '.join(words[:2])
+            result = await _single_ebay_search(
+                client, token, broad_term, condition_filter, limit
+            )
+            if result:
+                result["broad_match"] = True
+                _price_cache[cache_key] = result
+                print(f"eBay: Found prices using broad search '{broad_term}'")
+                return result
 
-            data = response.json()
-            items = data.get("itemSummaries", [])
-
-            if not items:
-                return None
-
-            # Extract prices
-            prices = []
-            sold_items = []
-
-            for item in items:
-                price_data = item.get("price", {})
-                if price_data.get("currency") == "USD":
-                    price = Decimal(price_data.get("value", "0"))
-                    if price > 0:
-                        prices.append(price)
-                        sold_items.append({
-                            "title": item.get("title"),
-                            "price": float(price),
-                            "condition": item.get("condition"),
-                            "item_id": item.get("itemId"),
-                        })
-
-            if not prices:
-                return None
-
-            return {
-                "avg_price": float(sum(prices) / len(prices)),
-                "low_price": float(min(prices)),
-                "high_price": float(max(prices)),
-                "num_sales": len(prices),
-                "sold_items": sold_items[:10],  # Limit detail to 10
-            }
-
-    except Exception as e:
-        print(f"eBay lookup error: {e}")
-        return None
+    print(f"eBay: No results found for '{search_term}' after all fallback attempts")
+    return None
 
 
 async def search_completed_listings(

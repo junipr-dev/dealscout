@@ -39,3 +39,17 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def get_db_session():
+    """Get database session as async context manager."""
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

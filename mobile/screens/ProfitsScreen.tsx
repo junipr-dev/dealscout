@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Image,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { api, Flip, Stats } from '../services/api';
 
 type FilterPeriod = 'all' | 'week' | 'month';
@@ -34,9 +36,12 @@ export default function ProfitsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -74,9 +79,27 @@ export default function ProfitsScreen() {
     return (
       <View style={styles.flipCard}>
         <View style={styles.flipHeader}>
-          <Text style={styles.flipTitle} numberOfLines={1}>
-            {item.item_name}
-          </Text>
+          {/* Thumbnail */}
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.thumbnailPlaceholder}>
+              <Text style={styles.thumbnailPlaceholderText}>📦</Text>
+            </View>
+          )}
+          <View style={styles.flipHeaderText}>
+            <Text style={styles.flipTitle} numberOfLines={1}>
+              {item.item_name}
+            </Text>
+            <View style={styles.flipMeta}>
+              <Text style={styles.metaText}>{item.sell_platform || 'Unknown'}</Text>
+              <Text style={styles.metaText}>{item.sell_date}</Text>
+            </View>
+          </View>
           <Text style={[styles.profit, { color: profitColor }]}>
             {profit >= 0 ? '+' : ''}${profit.toFixed(2)}
           </Text>
@@ -101,11 +124,6 @@ export default function ProfitsScreen() {
               </Text>
             </View>
           )}
-        </View>
-
-        <View style={styles.flipMeta}>
-          <Text style={styles.metaText}>{item.sell_platform || 'Unknown'}</Text>
-          <Text style={styles.metaText}>{item.sell_date}</Text>
         </View>
       </View>
     );
@@ -292,15 +310,36 @@ const styles = StyleSheet.create({
   flipHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  thumbnailPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  thumbnailPlaceholderText: {
+    fontSize: 20,
+  },
+  flipHeaderText: {
+    flex: 1,
+    marginRight: 12,
   },
   flipTitle: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    marginRight: 12,
+    marginBottom: 4,
   },
   profit: {
     fontSize: 18,
@@ -324,10 +363,7 @@ const styles = StyleSheet.create({
   },
   flipMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    paddingTop: 8,
+    gap: 8,
   },
   metaText: {
     color: '#888',
