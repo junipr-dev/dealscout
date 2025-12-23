@@ -17,6 +17,7 @@ from ..schemas import (
 )
 from ..services.ebay_lookup import get_market_value
 from ..services.profit_calculator import calculate_estimated_profit
+from ..services.listing_generator import generate_listing_suggestion
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -80,8 +81,8 @@ async def update_condition(
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    if condition_update.condition not in ("new", "used"):
-        raise HTTPException(status_code=400, detail="Condition must be 'new' or 'used'")
+    if condition_update.condition not in ("new", "used", "needs_repair"):
+        raise HTTPException(status_code=400, detail="Condition must be 'new', 'used', or 'needs_repair'")
 
     deal.condition = condition_update.condition
     deal.condition_confidence = "user_confirmed"
@@ -226,3 +227,36 @@ async def purchase_deal(
     await db.commit()
     await db.refresh(flip)
     return flip
+
+
+@router.get("/{deal_id}/listing-suggestion")
+async def get_listing_suggestion(deal_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Generate an eBay listing suggestion for a deal.
+
+    Returns optimized title, description, category, and testing checklist.
+    """
+    result = await db.execute(select(Deal).where(Deal.id == deal_id))
+    deal = result.scalar_one_or_none()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    suggestion = generate_listing_suggestion(
+        title=deal.title,
+        brand=deal.brand,
+        model=deal.model,
+        category=deal.category,
+        subcategory=deal.subcategory,
+        condition=deal.condition,
+        item_details=deal.item_details,
+        repair_notes=deal.repair_notes,
+        accessory_completeness=deal.accessory_completeness,
+        bundle_items=deal.bundle_items,
+        variants=deal.variants,
+        part_numbers=deal.part_numbers,
+    )
+
+    return {
+        "deal_id": deal_id,
+        **suggestion,
+    }
