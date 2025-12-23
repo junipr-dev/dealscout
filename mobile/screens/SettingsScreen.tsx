@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import { scheduleDemoNotification } from '../services/notifications';
 
@@ -30,10 +31,17 @@ export default function SettingsScreen() {
   const [ebayStatus, setEbayStatus] = useState<EbayStatus | null>(null);
   const [ebayLoading, setEbayLoading] = useState(false);
 
+  // Load settings on mount
   useEffect(() => {
     loadSettings();
-    loadEbayStatus();
   }, []);
+
+  // Refresh eBay status every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadEbayStatus();
+    }, [])
+  );
 
   const loadSettings = async () => {
     try {
