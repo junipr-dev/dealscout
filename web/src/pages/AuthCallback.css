@@ -1,0 +1,67 @@
+.auth-callback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.callback-container {
+  text-align: center;
+  max-width: 400px;
+}
+
+.callback-container h2 {
+  color: #fff;
+  font-size: 1.5rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.callback-container p {
+  color: #aaa;
+  margin: 0;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #333;
+  border-top-color: #4ecca3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  background: #4ecca3;
+  color: #1a1a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0 auto;
+}
+
+.error-icon {
+  width: 64px;
+  height: 64px;
+  background: #ff6b6b;
+  color: #1a1a2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0 auto;
+}

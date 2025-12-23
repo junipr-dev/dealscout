@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View } from 'react-native';
+import { Text, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
@@ -13,8 +13,10 @@ import DealDetailScreen from './screens/DealDetailScreen';
 import CurrentFlipsScreen from './screens/CurrentFlipsScreen';
 import ProfitsScreen from './screens/ProfitsScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import LoginScreen from './screens/LoginScreen';
 import { registerForPushNotifications } from './services/notifications';
 import { EbayProvider } from './contexts/EbayContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -55,10 +57,15 @@ function DealsStack() {
   );
 }
 
-export default function App() {
+// Main app navigator component
+function AppNavigator() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   useEffect(() => {
-    // Register for push notifications
-    registerForPushNotifications();
+    // Register for push notifications only when authenticated
+    if (isAuthenticated) {
+      registerForPushNotifications();
+    }
 
     // Handle notification taps
     const subscription = Notifications.addNotificationResponseReceivedListener(
@@ -70,54 +77,77 @@ export default function App() {
     );
 
     return () => subscription.remove();
-  }, []);
+  }, [isAuthenticated]);
 
+  // Show loading screen while checking auth
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#1a1a2e', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4ecca3" />
+      </View>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  // Show main app when authenticated
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#1a1a2e' },
+        headerTintColor: '#fff',
+        tabBarStyle: { backgroundColor: '#1a1a2e', borderTopColor: '#333' },
+        tabBarActiveTintColor: '#4ecca3',
+        tabBarInactiveTintColor: '#888',
+      }}
+    >
+      <Tab.Screen
+        name="Deals"
+        component={DealsStack}
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabIcon name="$" color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Current Flips"
+        component={CurrentFlipsScreen}
+        options={{
+          tabBarIcon: ({ color }) => <TabIcon name="↻" color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Profits"
+        component={ProfitsScreen}
+        options={{
+          tabBarIcon: ({ color }) => <TabIcon name="↗" color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarIcon: ({ color }) => <TabIcon name="⚙" color={color} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+export default function App() {
   return (
     <SafeAreaProvider>
-      <EbayProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          <Tab.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: '#1a1a2e' },
-          headerTintColor: '#fff',
-          tabBarStyle: { backgroundColor: '#1a1a2e', borderTopColor: '#333' },
-          tabBarActiveTintColor: '#4ecca3',
-          tabBarInactiveTintColor: '#888',
-        }}
-      >
-        <Tab.Screen
-          name="Deals"
-          component={DealsStack}
-          options={{
-            headerShown: false,
-            tabBarIcon: ({ color }) => <TabIcon name="$" color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Current Flips"
-          component={CurrentFlipsScreen}
-          options={{
-            tabBarIcon: ({ color }) => <TabIcon name="↻" color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Profits"
-          component={ProfitsScreen}
-          options={{
-            tabBarIcon: ({ color }) => <TabIcon name="↗" color={color} />,
-          }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{
-            tabBarIcon: ({ color }) => <TabIcon name="⚙" color={color} />,
-          }}
-        />
-          </Tab.Navigator>
-        </NavigationContainer>
-      </EbayProvider>
+      <AuthProvider>
+        <EbayProvider>
+          <NavigationContainer>
+            <StatusBar style="light" />
+            <AppNavigator />
+          </NavigationContainer>
+        </EbayProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
