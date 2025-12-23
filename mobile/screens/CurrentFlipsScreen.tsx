@@ -30,7 +30,6 @@ export default function CurrentFlipsScreen() {
   const [flips, setFlips] = useState<Flip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [sellModal, setSellModal] = useState<{ visible: boolean; flip: Flip | null }>({
     visible: false,
     flip: null,
@@ -65,39 +64,32 @@ export default function CurrentFlipsScreen() {
     }
   }, []);
 
-  // Auto-refresh when screen comes into focus
+  // Auto-refresh and sync eBay orders when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadFlips();
+      const syncAndLoad = async () => {
+        // Sync eBay orders first (silently)
+        try {
+          await api.syncEbayOrders();
+        } catch (error) {
+          console.log('eBay sync skipped:', error);
+        }
+        // Then load flips
+        loadFlips();
+      };
+      syncAndLoad();
     }, [loadFlips])
   );
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadFlips();
-  };
-
-  const handleSyncEbay = async () => {
-    setSyncing(true);
+    // Sync eBay orders on pull-to-refresh too
     try {
-      const result = await api.syncEbayOrders();
-      if (result.success && result.synced > 0) {
-        Alert.alert(
-          'Sales Synced!',
-          `${result.synced} item(s) marked as sold from eBay.`,
-          [{ text: 'OK', onPress: loadFlips }]
-        );
-      } else if (result.success) {
-        Alert.alert('No New Sales', 'No new eBay sales detected.');
-      } else {
-        Alert.alert('Sync Failed', result.error || 'Could not sync eBay orders');
-      }
+      await api.syncEbayOrders();
     } catch (error) {
-      console.error('eBay sync error:', error);
-      Alert.alert('Error', 'Failed to sync eBay orders');
-    } finally {
-      setSyncing(false);
+      console.log('eBay sync skipped:', error);
     }
+    loadFlips();
   };
 
   const calculateDaysHeld = (buyDate: string): number => {
@@ -372,22 +364,11 @@ Message me with any questions!`;
   return (
     <View style={styles.container}>
       <View style={styles.summaryBar}>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryContent}>
-            <Text style={styles.summaryLabel}>Total Inventory Value</Text>
-            <Text style={styles.summaryValue}>
-              ${totalInventoryValue.toFixed(2)}
-            </Text>
-            <Text style={styles.summaryCount}>{flips.length} items</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.syncBtn, syncing && styles.syncBtnDisabled]}
-            onPress={handleSyncEbay}
-            disabled={syncing}
-          >
-            <Text style={styles.syncBtnText}>{syncing ? 'Syncing...' : 'Sync eBay'}</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.summaryLabel}>Total Inventory Value</Text>
+        <Text style={styles.summaryValue}>
+          ${totalInventoryValue.toFixed(2)}
+        </Text>
+        <Text style={styles.summaryCount}>{flips.length} items</Text>
       </View>
 
       <FlatList
@@ -582,30 +563,9 @@ const styles = StyleSheet.create({
   summaryBar: {
     backgroundColor: '#1a1a2e',
     padding: 16,
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryContent: {
-    flex: 1,
-  },
-  syncBtn: {
-    backgroundColor: '#1877F2',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  syncBtnDisabled: {
-    backgroundColor: '#333',
-  },
-  syncBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
   },
   summaryLabel: {
     color: '#888',
