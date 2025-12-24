@@ -17,68 +17,75 @@ export default function Deals() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<FilterTab>('good')
   const knownDealIds = useRef<Set<number>>(new Set())
-  const isInitialLoad = useRef(true)
+  const toastRef = useRef(showDealNotification)
 
-  // Load deals function
-  const loadDeals = async (isPolling = false) => {
-    try {
-      if (!isPolling) setLoading(true)
-      let params: any = {}
-
-      if (activeTab === 'good') {
-        params.status = 'new'
-      } else if (activeTab === 'review') {
-        params.needs_review = true
-      }
-
-      const data = await api.getDeals(params)
-
-      // Check for new deals (only on polling after initial load)
-      if (isPolling && !isInitialLoad.current) {
-        const newDeals = data.filter(deal => !knownDealIds.current.has(deal.id))
-        newDeals.forEach(deal => {
-          showDealNotification(deal.title, deal.estimated_profit ?? undefined)
-        })
-      }
-
-      // Update known deal IDs
-      knownDealIds.current = new Set(data.map(d => d.id))
-      isInitialLoad.current = false
-      setDeals(data)
-      setError(null)
-    } catch (err) {
-      if (!isPolling) setError('Failed to load deals')
-      console.error(err)
-    } finally {
-      if (!isPolling) setLoading(false)
-    }
-  }
-
-  // Initial load and tab change
+  // Keep toast ref current
   useEffect(() => {
-    isInitialLoad.current = true
+    toastRef.current = showDealNotification
+  }, [showDealNotification])
+
+  useEffect(() => {
+    let cancelled = false
     knownDealIds.current.clear()
+
+    const loadDeals = async (isPolling = false) => {
+      try {
+        if (!isPolling) setLoading(true)
+        let params: any = {}
+
+        if (activeTab === 'good') {
+          params.status = 'new'
+        } else if (activeTab === 'review') {
+          params.needs_review = true
+        }
+
+        const data = await api.getDeals(params)
+
+        if (cancelled) return
+
+        // Check for new deals on polling
+        if (isPolling && knownDealIds.current.size > 0) {
+          const newDeals = data.filter(deal => !knownDealIds.current.has(deal.id))
+          newDeals.forEach(deal => {
+            const profit = deal.estimated_profit ? parseFloat(String(deal.estimated_profit)) : undefined
+            toastRef.current(deal.title, profit)
+          })
+        }
+
+        knownDealIds.current = new Set(data.map(d => d.id))
+        setDeals(data)
+        setError(null)
+      } catch (err) {
+        if (!isPolling) setError('Failed to load deals')
+        console.error(err)
+      } finally {
+        if (!isPolling) setLoading(false)
+      }
+    }
+
     loadDeals()
+
+    const interval = setInterval(() => loadDeals(true), POLL_INTERVAL)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [activeTab])
 
-  // Polling for new deals
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadDeals(true)
-    }, POLL_INTERVAL)
-
-    return () => clearInterval(interval)
-  }, [activeTab])
-
-  const formatPrice = (price: number | null) => {
-    if (price === null) return '—'
-    return `$${price.toFixed(0)}`
+  const formatPrice = (price: number | string | null) => {
+    if (price === null || price === undefined) return '—'
+    const num = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(num)) return '—'
+    return `$${num.toFixed(0)}`
   }
 
-  const getProfitClass = (profit: number | null) => {
-    if (profit === null) return ''
-    if (profit >= 50) return 'profit-high'
-    if (profit >= 20) return 'profit-medium'
+  const getProfitClass = (profit: number | string | null) => {
+    if (profit === null || profit === undefined) return ''
+    const num = typeof profit === 'string' ? parseFloat(profit) : profit
+    if (isNaN(num)) return ''
+    if (num >= 50) return 'profit-high'
+    if (num >= 20) return 'profit-medium'
     return 'profit-low'
   }
 
@@ -186,7 +193,7 @@ export default function Deals() {
 
                   {deal.local_pickup_available && (
                     <div className="local-pickup">
-                      Local Pickup {deal.distance_miles && `(${deal.distance_miles.toFixed(1)} mi)`}
+                      Local Pickup {deal.distance_miles && `(${parseFloat(String(deal.distance_miles)).toFixed(1)} mi)`}
                     </div>
                   )}
                 </div>
