@@ -46,6 +46,7 @@ def generate_listing_title(
     condition: Optional[str],
     variants: Optional[str] = None,
     part_numbers: Optional[list] = None,
+    item_name: Optional[str] = None,
     max_length: int = 80,
 ) -> str:
     """
@@ -90,6 +91,10 @@ def generate_listing_title(
     # Build title, truncate if needed
     title = " ".join(parts)
 
+    # Fallback to item_name if no structured data available
+    if not title.strip() and item_name:
+        title = item_name
+
     if len(title) > max_length:
         # Truncate intelligently - don't cut words
         title = title[:max_length].rsplit(" ", 1)[0]
@@ -108,74 +113,141 @@ def generate_listing_description(
     bundle_items: Optional[list] = None,
 ) -> str:
     """
-    Generate a structured eBay listing description.
+    Generate a professional branded HTML eBay listing description.
 
-    Follows eBay best practices:
-    - Clear condition statement
-    - Detailed specifications
-    - What's included
-    - Known issues (for repair items)
-    - No contact info or external links
+    Creates a mobile-responsive, visually appealing template that:
+    - Uses clean, modern styling
+    - Highlights key product information
+    - Builds buyer trust with clear policies
+    - Works on all devices
 
     Returns:
-        Formatted description string.
+        HTML formatted description string.
     """
-    sections = []
+    # Condition info
+    condition_config = {
+        "new": {
+            "text": "Brand New - Factory Sealed",
+            "detail": "Never opened or used. Includes all original accessories and packaging.",
+            "color": "#4ecca3",
+            "icon": "✓"
+        },
+        "used": {
+            "text": "Pre-Owned - Excellent Condition",
+            "detail": "Fully tested and working. Shows minimal signs of use.",
+            "color": "#4ecca3",
+            "icon": "✓"
+        },
+        "needs_repair": {
+            "text": "For Parts or Repair",
+            "detail": "SOLD AS-IS. Not working - please read details below.",
+            "color": "#ff6b6b",
+            "icon": "⚠"
+        },
+        "unknown": {
+            "text": "Condition Unknown",
+            "detail": "Not tested. Sold as-is - please ask questions.",
+            "color": "#ff9800",
+            "icon": "?"
+        }
+    }
 
-    # Header
-    sections.append(f"# {title}\n")
+    cond = condition_config.get(condition, condition_config["unknown"])
 
-    # Condition section (critical for buyer trust)
-    if condition:
-        condition_text = {
-            "new": "Brand new, factory sealed. Never opened or used.",
-            "used": "Pre-owned and in good working condition. Tested and functional.",
-            "needs_repair": "**SOLD AS-IS FOR PARTS OR REPAIR.** Item is not working - see details below.",
-            "unknown": "Condition not tested. Sold as-is.",
-        }.get(condition, "Condition unknown. Please ask questions before purchasing.")
+    # Build specs rows
+    specs_rows = ""
+    if brand:
+        specs_rows += f'<tr><td style="padding:8px 12px;border-bottom:1px solid #333;color:#888;">Brand</td><td style="padding:8px 12px;border-bottom:1px solid #333;color:#fff;font-weight:500;">{brand}</td></tr>'
+    if model:
+        specs_rows += f'<tr><td style="padding:8px 12px;border-bottom:1px solid #333;color:#888;">Model</td><td style="padding:8px 12px;border-bottom:1px solid #333;color:#fff;font-weight:500;">{model}</td></tr>'
+    if item_details:
+        for key, value in item_details.items():
+            if value:
+                label = key.replace('_', ' ').title()
+                specs_rows += f'<tr><td style="padding:8px 12px;border-bottom:1px solid #333;color:#888;">{label}</td><td style="padding:8px 12px;border-bottom:1px solid #333;color:#fff;font-weight:500;">{value}</td></tr>'
 
-        sections.append(f"## Condition\n{condition_text}\n")
-
-    # Specifications
-    if item_details or brand or model:
-        sections.append("## Specifications\n")
-        specs = []
-        if brand:
-            specs.append(f"- **Brand:** {brand}")
-        if model:
-            specs.append(f"- **Model:** {model}")
-        if item_details:
-            for key, value in item_details.items():
-                if value:
-                    specs.append(f"- **{key.replace('_', ' ').title()}:** {value}")
-        sections.append("\n".join(specs) + "\n")
-
-    # Repair notes (for needs_repair items)
-    if repair_notes and condition == "needs_repair":
-        sections.append(f"## Known Issues\n{repair_notes}\n")
-
-    # What's included
-    sections.append("## What's Included\n")
+    # Build includes list
+    includes_html = ""
     if bundle_items:
         for item in bundle_items:
-            sections.append(f"- {item}")
+            includes_html += f'<li style="padding:4px 0;color:#ddd;">{item}</li>'
     elif accessory_completeness:
         if accessory_completeness.lower() == "complete":
-            sections.append("- Item with all original accessories")
+            includes_html = '<li style="padding:4px 0;color:#ddd;">Item with all original accessories</li>'
         else:
-            sections.append(f"- Item only ({accessory_completeness})")
+            includes_html = f'<li style="padding:4px 0;color:#ddd;">Item only ({accessory_completeness})</li>'
     else:
-        sections.append("- Item as shown in photos")
+        includes_html = '<li style="padding:4px 0;color:#ddd;">Item as shown in photos</li>'
 
-    sections.append("\n")
+    # Known issues section (for repair items)
+    issues_section = ""
+    if repair_notes and condition == "needs_repair":
+        issues_section = f'''
+        <div style="background:#2a1a1a;border-left:4px solid #ff6b6b;padding:16px;margin:20px 0;border-radius:0 8px 8px 0;">
+            <h3 style="color:#ff6b6b;margin:0 0 8px 0;font-size:16px;">⚠ Known Issues</h3>
+            <p style="color:#ddd;margin:0;line-height:1.6;">{repair_notes}</p>
+        </div>
+        '''
 
-    # Shipping note
-    sections.append("## Shipping\nItem will be carefully packaged and shipped within 1-2 business days.\n")
+    # Full HTML template
+    html = f'''
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:0 auto;background:#0f0f1a;color:#fff;padding:0;">
 
-    # Returns policy note
-    sections.append("## Returns\nPlease review all photos and description carefully. Feel free to ask questions before purchasing.\n")
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:24px;text-align:center;border-radius:8px 8px 0 0;">
+        <h1 style="margin:0;font-size:22px;font-weight:600;color:#fff;line-height:1.4;">{title}</h1>
+    </div>
 
-    return "\n".join(sections)
+    <!-- Condition Badge -->
+    <div style="background:#1a1a2e;padding:16px 24px;border-bottom:1px solid #333;">
+        <div style="display:inline-block;background:{cond['color']}22;border:1px solid {cond['color']};border-radius:6px;padding:12px 20px;">
+            <span style="color:{cond['color']};font-size:18px;margin-right:8px;">{cond['icon']}</span>
+            <span style="color:{cond['color']};font-weight:600;">{cond['text']}</span>
+        </div>
+        <p style="color:#aaa;margin:12px 0 0 0;font-size:14px;">{cond['detail']}</p>
+    </div>
+
+    {issues_section}
+
+    <!-- Specifications -->
+    <div style="padding:20px 24px;">
+        <h2 style="color:#4ecca3;font-size:16px;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">Specifications</h2>
+        <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden;">
+            {specs_rows if specs_rows else '<tr><td style="padding:12px;color:#888;">See photos for details</td></tr>'}
+        </table>
+    </div>
+
+    <!-- What's Included -->
+    <div style="padding:20px 24px;background:#1a1a2e;">
+        <h2 style="color:#4ecca3;font-size:16px;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">What's Included</h2>
+        <ul style="margin:0;padding-left:20px;list-style-type:disc;">
+            {includes_html}
+        </ul>
+    </div>
+
+    <!-- Shipping & Policies -->
+    <div style="padding:20px 24px;">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;">
+            <div style="flex:1;min-width:200px;background:#1a1a2e;padding:16px;border-radius:8px;">
+                <h3 style="color:#fff;font-size:14px;margin:0 0 8px 0;">📦 Fast Shipping</h3>
+                <p style="color:#888;margin:0;font-size:13px;">Ships within 1-2 business days. Carefully packaged for safe delivery.</p>
+            </div>
+            <div style="flex:1;min-width:200px;background:#1a1a2e;padding:16px;border-radius:8px;">
+                <h3 style="color:#fff;font-size:14px;margin:0 0 8px 0;">💬 Questions?</h3>
+                <p style="color:#888;margin:0;font-size:13px;">Feel free to message us before purchasing. We respond quickly!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#1a1a2e;padding:16px 24px;text-align:center;border-radius:0 0 8px 8px;border-top:1px solid #333;">
+        <p style="color:#666;margin:0;font-size:12px;">Thank you for shopping with us!</p>
+    </div>
+
+</div>
+'''
+
+    return html.strip()
 
 
 def generate_testing_checklist(
@@ -402,6 +474,7 @@ def generate_listing_suggestion(
         condition=condition,
         variants=variants,
         part_numbers=part_numbers,
+        item_name=title,  # Fallback to original title/item_name
     )
 
     description = generate_listing_description(

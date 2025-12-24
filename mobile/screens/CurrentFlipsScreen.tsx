@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   TextInput,
   Image,
   ScrollView,
+  Animated,
+  Pressable,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -24,6 +26,47 @@ interface ListingSuggestion {
   ebay_category: { category_id: number; category_name: string; category_key: string };
   testing_checklist: string[];
 }
+
+// Animated button component with scale effect
+const AnimatedButton = ({
+  children,
+  onPress,
+  style
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+  style?: any;
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 export default function CurrentFlipsScreen() {
   const navigation = useNavigation<any>();
@@ -324,22 +367,27 @@ Message me with any questions!`;
             style={styles.deleteBtn}
             onPress={() => handleDelete(item)}
           >
-            <Text style={styles.deleteBtnText}>Delete</Text>
+            <Text style={styles.deleteBtnIcon}>🗑</Text>
           </TouchableOpacity>
           {!isListed && (
             <>
-              <TouchableOpacity
-                style={styles.listingBtn}
+              <AnimatedButton
+                style={styles.ebayBtn}
                 onPress={() => handleListItem(item)}
               >
-                <Text style={styles.listingBtnText}>eBay</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.fbListingBtn}
+                <View style={styles.ebayLogo}>
+                  <Text style={styles.ebayLogoE}>e</Text>
+                  <Text style={styles.ebayLogoB}>b</Text>
+                  <Text style={styles.ebayLogoA}>a</Text>
+                  <Text style={styles.ebayLogoY}>y</Text>
+                </View>
+              </AnimatedButton>
+              <AnimatedButton
+                style={styles.fbBtn}
                 onPress={() => handleListOnFacebook(item)}
               >
-                <Text style={styles.fbListingBtnText}>FB</Text>
-              </TouchableOpacity>
+                <Text style={styles.fbLogo}>f</Text>
+              </AnimatedButton>
             </>
           )}
           <TouchableOpacity
@@ -687,24 +735,74 @@ const styles = StyleSheet.create({
   },
   flipActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
+    alignItems: 'center',
   },
   deleteBtn: {
-    flex: 1,
-    padding: 10,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#333',
   },
-  deleteBtnText: {
-    color: '#ff6b6b',
-    fontWeight: '600',
+  deleteBtnIcon: {
+    fontSize: 18,
   },
-  sellBtn: {
-    flex: 2,
-    padding: 10,
+  ebayBtn: {
+    width: 44,
+    height: 44,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  ebayLogo: {
+    flexDirection: 'row',
+  },
+  ebayLogoE: {
+    color: '#e53238',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+  },
+  ebayLogoB: {
+    color: '#0064d2',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+  },
+  ebayLogoA: {
+    color: '#f5af02',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+  },
+  ebayLogoY: {
+    color: '#86b817',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+  },
+  fbBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1877F2',
+  },
+  fbLogo: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  sellBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#4ecca3',
   },
   sellBtnText: {
@@ -800,18 +898,6 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     color: '#000',
-    fontWeight: '600',
-  },
-  // Listing button styles
-  listingBtn: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#1877F2',
-  },
-  listingBtnText: {
-    color: '#fff',
     fontWeight: '600',
   },
   // Planned repairs styles
@@ -930,18 +1016,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  // Facebook listing styles
-  fbListingBtn: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#1877F2',
-  },
-  fbListingBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
+  // Facebook listing modal styles
   fbInstructions: {
     color: '#888',
     fontSize: 13,
