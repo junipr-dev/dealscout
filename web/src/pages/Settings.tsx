@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import { useToast } from '../components/Toast'
 import './Settings.css'
 
 interface EbayStatus {
@@ -12,13 +13,12 @@ interface EbayStatus {
 }
 
 export default function Settings() {
+  const { showToast } = useToast()
   const [profitThreshold, setProfitThreshold] = useState('30')
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [ebayLoading, setEbayLoading] = useState(false)
   const [ebayStatus, setEbayStatus] = useState<EbayStatus | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadSettings()
@@ -32,7 +32,7 @@ export default function Settings() {
       setNotificationsEnabled(settings.notifications_enabled)
     } catch (error) {
       console.error('Failed to load settings:', error)
-      setError('Failed to load settings')
+      showToast({ type: 'error', title: 'Failed to Load', message: 'Could not load settings' })
     } finally {
       setLoading(false)
     }
@@ -53,11 +53,12 @@ export default function Settings() {
       const { auth_url } = await api.getEbayAuthUrl()
       if (auth_url) {
         window.open(auth_url, '_blank')
+        showToast({ type: 'info', title: 'eBay Authorization', message: 'Complete the login in the new window' })
         // Poll for status update after a delay
         setTimeout(() => loadEbayStatus(), 3000)
       }
     } catch (error) {
-      setError('Failed to start eBay authorization')
+      showToast({ type: 'error', title: 'Authorization Failed', message: 'Could not start eBay authorization' })
     } finally {
       setEbayLoading(false)
     }
@@ -68,10 +69,9 @@ export default function Settings() {
       setEbayLoading(true)
       await api.refreshEbayInfo()
       await loadEbayStatus()
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      showToast({ type: 'success', title: 'eBay Refreshed', message: 'Account info updated' })
     } catch (error) {
-      setError('Failed to refresh eBay info')
+      showToast({ type: 'error', title: 'Refresh Failed', message: 'Could not refresh eBay info' })
     } finally {
       setEbayLoading(false)
     }
@@ -86,10 +86,9 @@ export default function Settings() {
       setEbayLoading(true)
       await api.unlinkEbayAccount()
       await loadEbayStatus()
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      showToast({ type: 'success', title: 'eBay Unlinked', message: 'Account has been disconnected' })
     } catch (error) {
-      setError('Failed to unlink eBay account')
+      showToast({ type: 'error', title: 'Unlink Failed', message: 'Could not unlink eBay account' })
     } finally {
       setEbayLoading(false)
     }
@@ -102,10 +101,9 @@ export default function Settings() {
         ebay_fee_percentage: ebayStatus?.fee_percentage || 13,
         notifications_enabled: notificationsEnabled,
       })
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+      showToast({ type: 'success', title: 'Settings Saved', message: 'Your preferences have been updated' })
     } catch (error) {
-      setError('Failed to save settings')
+      showToast({ type: 'error', title: 'Save Failed', message: 'Could not save settings' })
     }
   }
 
@@ -124,19 +122,6 @@ export default function Settings() {
       <header className="page-header">
         <h1>Settings</h1>
       </header>
-
-      {error && (
-        <div className="error-message">
-          {error}
-          <button onClick={() => setError(null)} className="dismiss-error">×</button>
-        </div>
-      )}
-
-      {saveSuccess && (
-        <div className="success-message">
-          Settings saved successfully
-        </div>
-      )}
 
       <div className="settings-sections">
         {/* Deal Alerts Section */}

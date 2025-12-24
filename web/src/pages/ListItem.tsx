@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Flip } from '../services/api'
+import { useToast } from '../components/Toast'
 import './ListItem.css'
 
 interface ListingSuggestion {
@@ -15,6 +16,7 @@ interface ListingSuggestion {
 export default function ListItem() {
   const { flipId } = useParams<{ flipId: string }>()
   const navigate = useNavigate()
+  const { showToast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -58,7 +60,7 @@ export default function ListItem() {
       setCategoryName(suggestionData.ebay_category.category_name)
     } catch (error) {
       console.error('Failed to load listing data:', error)
-      alert('Failed to load listing details')
+      showToast({ type: 'error', title: 'Load Failed', message: 'Could not load listing details' })
     } finally {
       setLoading(false)
     }
@@ -72,7 +74,7 @@ export default function ListItem() {
     const totalImages = images.length + newFiles.length
 
     if (totalImages > 12) {
-      alert('Maximum 12 photos allowed')
+      showToast({ type: 'warning', title: 'Too Many Photos', message: 'Maximum 12 photos allowed' })
       return
     }
 
@@ -98,15 +100,15 @@ export default function ListItem() {
 
     if (!flipId) return
     if (!title.trim()) {
-      alert('Please enter a title')
+      showToast({ type: 'warning', title: 'Title Required', message: 'Please enter a title' })
       return
     }
     if (!price.trim() || isNaN(parseFloat(price))) {
-      alert('Please enter a valid price')
+      showToast({ type: 'warning', title: 'Invalid Price', message: 'Please enter a valid price' })
       return
     }
     if (images.length === 0) {
-      alert('Please add at least one photo')
+      showToast({ type: 'warning', title: 'Photos Required', message: 'Please add at least one photo' })
       return
     }
 
@@ -125,18 +127,18 @@ export default function ListItem() {
       })
 
       if (result.success) {
-        alert(`Your item is now live on eBay!\n\n${result.ebay_url}`)
+        showToast({ type: 'success', title: 'Listed on eBay!', message: 'Your item is now live', duration: 6000 })
         navigate('/flips')
       } else {
         if (result.requires_manual_listing) {
-          alert(result.error || 'Please complete the listing manually on eBay')
+          showToast({ type: 'warning', title: 'Manual Listing Required', message: result.error || 'Complete the listing on eBay' })
         } else {
-          alert(result.error || 'Failed to create listing')
+          showToast({ type: 'error', title: 'Listing Failed', message: result.error || 'Could not create listing' })
         }
       }
     } catch (error) {
       console.error('Listing error:', error)
-      alert('Failed to create listing. Please try again.')
+      showToast({ type: 'error', title: 'Listing Failed', message: 'Please try again' })
     } finally {
       setSubmitting(false)
     }

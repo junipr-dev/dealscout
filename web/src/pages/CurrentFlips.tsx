@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Flip } from '../services/api'
+import { useToast } from '../components/Toast'
 import './CurrentFlips.css'
 
 export default function CurrentFlips() {
   const navigate = useNavigate()
+  const { showToast, showSaleNotification } = useToast()
   const [flips, setFlips] = useState<Flip[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -32,11 +34,17 @@ export default function CurrentFlips() {
     suggestion: null,
   })
 
-  const loadFlips = useCallback(async () => {
+  const loadFlips = useCallback(async (showSyncNotification = false) => {
     try {
-      // Sync eBay orders silently first
+      // Sync eBay orders first
       try {
-        await api.syncEbayOrders()
+        const syncResult = await api.syncEbayOrders()
+        if (showSyncNotification && syncResult.synced > 0) {
+          // Show sale notifications for each synced order
+          syncResult.items?.forEach(item => {
+            showSaleNotification(item.item_name, item.profit)
+          })
+        }
       } catch (err) {
         console.log('eBay sync skipped:', err)
       }
@@ -51,7 +59,7 @@ export default function CurrentFlips() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [showSaleNotification])
 
   useEffect(() => {
     loadFlips()
@@ -59,7 +67,7 @@ export default function CurrentFlips() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await loadFlips()
+    await loadFlips(true) // Show sync notifications on manual refresh
   }
 
   const calculateDaysHeld = (buyDate: string): number => {
@@ -126,10 +134,18 @@ Message me with any questions!`
 
     try {
       await navigator.clipboard.writeText(fbText)
-      alert('Listing text copied! Open Facebook Marketplace and paste into your new listing.')
+      showToast({
+        type: 'success',
+        title: 'Copied to Clipboard',
+        message: 'Open Facebook Marketplace and paste into your new listing.',
+      })
       setListingModal({ visible: false, flip: null, loading: false, suggestion: null })
     } catch (err) {
-      alert('Failed to copy to clipboard')
+      showToast({
+        type: 'error',
+        title: 'Copy Failed',
+        message: 'Could not copy to clipboard',
+      })
     }
   }
 
@@ -155,13 +171,18 @@ Message me with any questions!`
         shipping_cost: 0,
       })
 
-      alert('Success! Sale recorded. Check Profits tab.')
+      const profit = price - sellModal.flip.buy_price - fees
+      showSaleNotification(sellModal.flip.item_name, profit)
       setSellModal({ visible: false, flip: null })
       setSellPrice('')
       setSellPlatform(null)
       loadFlips()
     } catch (error) {
-      alert('Failed to record sale')
+      showToast({
+        type: 'error',
+        title: 'Failed to Record Sale',
+        message: 'Please try again',
+      })
       console.error(error)
     }
   }
@@ -173,9 +194,18 @@ Message me with any questions!`
 
     try {
       await api.deleteFlip(flip.id)
+      showToast({
+        type: 'success',
+        title: 'Item Removed',
+        message: flip.item_name,
+      })
       loadFlips()
     } catch (error) {
-      alert('Failed to delete flip')
+      showToast({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'Could not remove item',
+      })
       console.error(error)
     }
   }
