@@ -1,0 +1,230 @@
+.deals-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  color: #fff;
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.tab.active {
+  background: #4ecca3;
+  color: #0f0f1a;
+  font-weight: 600;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.error-message {
+  background: #ff6b6b22;
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.deal-card {
+  background: #1a1a2e;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #333;
+}
+
+.deal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.deal-card.repair-card {
+  border: 2px solid #ff9800;
+}
+
+.deal-image {
+  position: relative;
+  height: 180px;
+  background: #0f0f1a;
+}
+
+.deal-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.condition-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-new {
+  background: #4ecca322;
+  color: #4ecca3;
+  border: 1px solid #4ecca3;
+}
+
+.badge-used {
+  background: #4ecca322;
+  color: #4ecca3;
+  border: 1px solid #4ecca3;
+}
+
+.badge-repair {
+  background: #ff980022;
+  color: #ff9800;
+  border: 1px solid #ff9800;
+}
+
+.badge-unknown {
+  background: #88888822;
+  color: #888;
+  border: 1px solid #888;
+}
+
+.deal-info {
+  padding: 1rem;
+}
+
+.deal-title {
+  color: #fff;
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deal-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.deal-meta span {
+  font-size: 0.75rem;
+  color: #888;
+  background: #0f0f1a;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.deal-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.price-row .label {
+  color: #888;
+}
+
+.asking-price {
+  color: #fff;
+}
+
+.market-price {
+  color: #4ecca3;
+}
+
+.profit-row {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #333;
+}
+
+.profit-value {
+  font-weight: 700;
+}
+
+.profit-high {
+  color: #4ecca3;
+}
+
+.profit-medium {
+  color: #ff9800;
+}
+
+.profit-low {
+  color: #888;
+}
+
+.local-pickup {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #4ecca3;
+  background: #4ecca322;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
