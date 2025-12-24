@@ -2,6 +2,8 @@
 
 This file provides project-specific guidance to Gemini.
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project Overview
 
 DealScout is a deal discovery and flip tracking app. It monitors Swoopa marketplace alerts (via Gmail), uses AI to classify items, looks up market prices on eBay, and notifies users of profitable deals.
