@@ -82,17 +82,21 @@ export default function DealDetail() {
       .reduce((sum, r) => sum + r.part_cost + (r.labor_hours * 25), 0)
   }
 
-  const formatPrice = (price: number | null) => {
-    if (price === null) return '—'
-    return `$${price.toFixed(2)}`
+  const formatPrice = (price: number | string | null) => {
+    if (price === null || price === undefined) return '—'
+    const num = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(num)) return '—'
+    return `$${num.toFixed(2)}`
   }
 
   if (loading) return <div className="deal-detail loading">Loading...</div>
   if (!deal) return <div className="deal-detail error">Deal not found</div>
 
   const repairCost = calculateTotalRepairCost()
-  const projectedProfit = deal.market_value && deal.asking_price
-    ? deal.market_value - deal.asking_price - repairCost - (deal.market_value * 0.13)
+  const marketVal = deal.market_value ? parseFloat(String(deal.market_value)) : null
+  const askingVal = deal.asking_price ? parseFloat(String(deal.asking_price)) : null
+  const projectedProfit = marketVal && askingVal
+    ? marketVal - askingVal - repairCost - (marketVal * 0.13)
     : null
 
   return (
@@ -186,7 +190,7 @@ export default function DealDetail() {
             {deal.local_pickup_available && (
               <div className="detail-row">
                 <span>Location:</span>
-                <span>{deal.location} ({deal.distance_miles?.toFixed(1)} mi)</span>
+                <span>{deal.location} {deal.distance_miles && `(${parseFloat(String(deal.distance_miles)).toFixed(1)} mi)`}</span>
               </div>
             )}
           </div>

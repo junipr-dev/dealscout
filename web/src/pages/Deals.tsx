@@ -5,17 +5,19 @@ import type { Deal } from '../services/api'
 import { useToast } from '../components/Toast'
 import './Deals.css'
 
-type FilterTab = 'good' | 'review' | 'all'
+type LocationFilter = 'all' | 'pickup' | 'shipping'
 
 const POLL_INTERVAL = 30000 // 30 seconds
+const LOCAL_RADIUS_MILES = 100
 
 export default function Deals() {
   const navigate = useNavigate()
   const { showDealNotification } = useToast()
   const [deals, setDeals] = useState<Deal[]>([])
+  const [needsReview, setNeedsReview] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<FilterTab>('good')
+  const [activeFilter, setActiveFilter] = useState<LocationFilter>('all')
   const knownDealIds = useRef<Set<number>>(new Set())
   const toastRef = useRef(showDealNotification)
 
@@ -24,6 +26,24 @@ export default function Deals() {
     toastRef.current = showDealNotification
   }, [showDealNotification])
 
+  // Check if deal qualifies for local pickup
+  const isLocalPickup = (deal: Deal): boolean => {
+    if (deal.local_pickup_available) return true
+    const distance = deal.distance_miles ? parseFloat(String(deal.distance_miles)) : null
+    return distance !== null && distance <= LOCAL_RADIUS_MILES
+  }
+
+  // Filter deals by location
+  const filteredDeals = deals.filter(deal => {
+    if (activeFilter === 'all') return true
+    const isLocal = isLocalPickup(deal)
+    return activeFilter === 'pickup' ? isLocal : !isLocal
+  })
+
+  // Count deals in each category
+  const localCount = deals.filter(isLocalPickup).length
+  const shippingCount = deals.length - localCount
+
   useEffect(() => {
     let cancelled = false
     knownDealIds.current.clear()
@@ -31,29 +51,30 @@ export default function Deals() {
     const loadDeals = async (isPolling = false) => {
       try {
         if (!isPolling) setLoading(true)
-        let params: any = {}
 
-        if (activeTab === 'good') {
-          params.status = 'new'
-        } else if (activeTab === 'review') {
-          params.needs_review = true
-        }
-
-        const data = await api.getDeals(params)
+        // Load both regular deals and needs review deals
+        const [allDeals, reviewDeals] = await Promise.all([
+          api.getDeals({ status: 'new' }),
+          api.getDeals({ needs_review: true }),
+        ])
 
         if (cancelled) return
 
+        // Filter out unknown condition from regular deals
+        const validDeals = allDeals.filter(d => d.condition !== 'unknown')
+
         // Check for new deals on polling
         if (isPolling && knownDealIds.current.size > 0) {
-          const newDeals = data.filter(deal => !knownDealIds.current.has(deal.id))
+          const newDeals = validDeals.filter(deal => !knownDealIds.current.has(deal.id))
           newDeals.forEach(deal => {
             const profit = deal.estimated_profit ? parseFloat(String(deal.estimated_profit)) : undefined
             toastRef.current(deal.title, profit)
           })
         }
 
-        knownDealIds.current = new Set(data.map(d => d.id))
-        setDeals(data)
+        knownDealIds.current = new Set(validDeals.map(d => d.id))
+        setDeals(validDeals)
+        setNeedsReview(reviewDeals)
         setError(null)
       } catch (err) {
         if (!isPolling) setError('Failed to load deals')
@@ -71,7 +92,7 @@ export default function Deals() {
       cancelled = true
       clearInterval(interval)
     }
-  }, [activeTab])
+  }, [])
 
   const formatPrice = (price: number | string | null) => {
     if (price === null || price === undefined) return '—'
@@ -94,7 +115,7 @@ export default function Deals() {
     const badges: Record<string, { text: string; className: string }> = {
       'new': { text: 'New', className: 'badge-new' },
       'used': { text: 'Used', className: 'badge-used' },
-      'needs_repair': { text: 'Needs Repair', className: 'badge-repair' },
+      'needs_repair': { text: 'Repair', className: 'badge-repair' },
       'unknown': { text: 'Unknown', className: 'badge-unknown' },
     }
     return badges[condition] || null
@@ -114,38 +135,67 @@ export default function Deals() {
         <h1>Deals</h1>
       </header>
 
+      {/* Needs Review Section */}
+      {needsReview.length > 0 && (
+        <div className="needs-review-section">
+          <h2 className="section-title">Needs Review ({needsReview.length})</h2>
+          <div className="review-scroll">
+            {needsReview.map(deal => (
+              <div
+                key={deal.id}
+                className="review-card"
+                onClick={() => navigate(`/deals/${deal.id}`)}
+              >
+                {deal.image_url ? (
+                  <img src={deal.image_url} alt={deal.title} className="review-thumbnail" />
+                ) : (
+                  <div className="review-thumbnail-placeholder">📦</div>
+                )}
+                <div className="review-title">{deal.title}</div>
+                <div className="review-price">{formatPrice(deal.asking_price)}</div>
+                <div className="review-question">
+                  {deal.repair_needed ? 'Confirm repair?' : 'Condition?'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Location Filter Tabs */}
       <div className="filter-tabs">
         <button
-          className={`tab ${activeTab === 'good' ? 'active' : ''}`}
-          onClick={() => setActiveTab('good')}
+          className={`tab ${activeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('all')}
         >
-          Good Deals
+          All ({deals.length})
         </button>
         <button
-          className={`tab ${activeTab === 'review' ? 'active' : ''}`}
-          onClick={() => setActiveTab('review')}
+          className={`tab ${activeFilter === 'pickup' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('pickup')}
         >
-          Needs Review
+          Pick-up ({localCount})
         </button>
         <button
-          className={`tab ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => setActiveTab('all')}
+          className={`tab ${activeFilter === 'shipping' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('shipping')}
         >
-          All
+          Shipping ({shippingCount})
         </button>
       </div>
 
       {error && <div className="error-message">{error}</div>}
 
       <div className="deals-grid">
-        {deals.length === 0 ? (
+        {filteredDeals.length === 0 ? (
           <div className="empty-state">
             <p>No deals found</p>
           </div>
         ) : (
-          deals.map(deal => {
+          filteredDeals.map(deal => {
             const conditionBadge = getConditionBadge(deal.condition)
             const isRepair = deal.condition === 'needs_repair'
+            const distance = deal.distance_miles ? parseFloat(String(deal.distance_miles)) : null
 
             return (
               <div
@@ -172,6 +222,9 @@ export default function Deals() {
                   <div className="deal-meta">
                     {deal.category && <span className="category">{deal.category}</span>}
                     {deal.source && <span className="source">{deal.source}</span>}
+                    {distance !== null && distance <= LOCAL_RADIUS_MILES && (
+                      <span className="distance">{distance.toFixed(0)} mi</span>
+                    )}
                   </div>
 
                   <div className="deal-prices">
@@ -193,7 +246,7 @@ export default function Deals() {
 
                   {deal.local_pickup_available && (
                     <div className="local-pickup">
-                      Local Pickup {deal.distance_miles && `(${parseFloat(String(deal.distance_miles)).toFixed(1)} mi)`}
+                      Local Pickup
                     </div>
                   )}
                 </div>

@@ -120,7 +120,7 @@ export default function CurrentFlips() {
   const copyForFacebook = async () => {
     if (!listingModal.suggestion || !listingModal.flip) return
     const { suggested_title, description } = listingModal.suggestion
-    const price = listingModal.flip.buy_price * 1.5 // Suggest 50% markup as starting point
+    const price = parseFloat(String(listingModal.flip.buy_price)) * 1.5 // Suggest 50% markup as starting point
 
     const fbText = `${suggested_title}
 
@@ -171,7 +171,7 @@ Message me with any questions!`
         shipping_cost: 0,
       })
 
-      const profit = price - sellModal.flip.buy_price - fees
+      const profit = price - parseFloat(String(sellModal.flip.buy_price)) - fees
       showSaleNotification(sellModal.flip.item_name, profit)
       setSellModal({ visible: false, flip: null })
       setSellPrice('')
@@ -453,7 +453,7 @@ Message me with any questions!`
                       {listingModal.suggestion.description}
                     </div>
                     <div className="fb-preview-price">
-                      Price: ${((listingModal.flip?.buy_price || 0) * 1.5).toFixed(0)} OBO
+                      Price: ${(parseFloat(String(listingModal.flip?.buy_price || 0)) * 1.5).toFixed(0)} OBO
                     </div>
                   </div>
                 </div>
