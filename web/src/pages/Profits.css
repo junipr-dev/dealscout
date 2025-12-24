@@ -1,0 +1,243 @@
+.profits-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  color: #fff;
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.error-message {
+  background: #ff6b6b22;
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Stats Summary */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-box {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid #333;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  color: #4ecca3;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #888;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.tab:hover {
+  background: #252540;
+  color: #fff;
+}
+
+.tab.active {
+  background: #4ecca3;
+  color: #0f0f1a;
+  border-color: #4ecca3;
+}
+
+/* Filtered Total */
+.filtered-total {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.filtered-label {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.filtered-value {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.empty-state p {
+  color: #fff;
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.empty-subtext {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+/* Flips List */
+.flips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flip-card {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #333;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.flip-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.flip-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.thumbnail-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: #0f0f1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.flip-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.flip-title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flip-meta {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.meta-text {
+  color: #888;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.profit {
+  font-size: 1.25rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Flip Details */
+.flip-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.detail-label {
+  color: #888;
+}
+
+.detail-value {
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-container {
+    grid-template-columns: 1fr;
+  }
+
+  .flip-header {
+    flex-wrap: wrap;
+  }
+
+  .flip-title {
+    white-space: normal;
+  }
+}

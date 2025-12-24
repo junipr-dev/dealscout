@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api, Deal, RepairOption } from '../services/api'
+import { api } from '../services/api'
+import type { Deal } from '../services/api'
 import './DealDetail.css'
 
 export default function DealDetail() {

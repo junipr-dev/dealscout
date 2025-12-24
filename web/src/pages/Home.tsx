@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import '../App.css'
 
 export default function Home() {
@@ -27,11 +28,9 @@ export default function Home() {
         </div>
 
         <div className="cta-section">
-          <p className="cta-text">Available on mobile</p>
-          <div className="app-badges">
-            <span className="badge">iOS</span>
-            <span className="badge">Android</span>
-          </div>
+          <Link to="/deals" className="badge" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+            Open Web App
+          </Link>
         </div>
       </main>
 

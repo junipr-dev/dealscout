@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, Deal } from '../services/api'
+import { api } from '../services/api'
+import type { Deal } from '../services/api'
 import './Deals.css'
 
 type FilterTab = 'good' | 'review' | 'all'

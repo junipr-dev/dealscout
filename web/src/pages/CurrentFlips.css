@@ -1,0 +1,596 @@
+.current-flips-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  color: #fff;
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.refresh-btn {
+  background: #4ecca3;
+  color: #0f0f1a;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #3db88f;
+  transform: translateY(-1px);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.summary-bar {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  border: 1px solid #333;
+}
+
+.summary-label {
+  color: #888;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.summary-value {
+  color: #4ecca3;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.summary-count {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.error-message {
+  background: #ff6b6b22;
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #fff;
+}
+
+.empty-subtext {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #888 !important;
+}
+
+.flips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flip-card {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #333;
+  transition: all 0.2s;
+}
+
+.flip-card:hover {
+  border-color: #4ecca3;
+  box-shadow: 0 4px 16px rgba(78, 204, 163, 0.1);
+}
+
+.flip-card.listed {
+  border: 2px solid #4ecca3;
+}
+
+.flip-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.thumbnail-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: #0f0f1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.flip-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.flip-title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.flip-details {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.buy-price {
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.source {
+  color: #888;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.status-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.listed-badge,
+.not-listed-badge {
+  font-size: 0.625rem;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.listed-badge {
+  color: #4ecca3;
+  background: rgba(78, 204, 163, 0.2);
+}
+
+.not-listed-badge {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.2);
+}
+
+.days-count {
+  color: #4ecca3;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.category {
+  color: #4ecca3;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+  text-transform: capitalize;
+}
+
+.ebay-link {
+  color: #1877F2;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.planned-repairs {
+  background: rgba(255, 152, 0, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.planned-repairs-label {
+  color: #ff9800;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.planned-repairs-list {
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.flip-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.delete-btn,
+.ebay-btn,
+.fb-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 1.125rem;
+}
+
+.delete-btn {
+  background: #333;
+}
+
+.delete-btn:hover {
+  background: #444;
+  transform: scale(1.05);
+}
+
+.ebay-btn {
+  background: #fff;
+}
+
+.ebay-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ebay-logo {
+  display: flex;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.ebay-e { color: #e53238; }
+.ebay-b { color: #0064d2; }
+.ebay-a { color: #f5af02; }
+.ebay-y { color: #86b817; }
+
+.fb-btn {
+  background: #1877F2;
+  color: #fff;
+}
+
+.fb-btn:hover {
+  background: #0a5fcf;
+  transform: scale(1.05);
+}
+
+.fb-logo {
+  font-weight: bold;
+  font-size: 1.375rem;
+}
+
+.sell-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  border: none;
+  background: #4ecca3;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sell-btn:hover {
+  background: #3db88f;
+  transform: translateY(-1px);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: #1a1a2e;
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #333;
+}
+
+.modal-title {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0 0 0.5rem;
+}
+
+.modal-subtitle {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-input {
+  width: 100%;
+  background: #0f0f1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #fff;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #4ecca3;
+}
+
+.platform-label {
+  color: #888;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.platform-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.platform-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #333;
+  color: #888;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.platform-btn:hover {
+  background: #444;
+}
+
+.platform-btn.active {
+  background: #4ecca3;
+  color: #000;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.modal-cancel-btn,
+.modal-confirm-btn {
+  flex: 1;
+  padding: 0.875rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-cancel-btn {
+  background: #333;
+  color: #fff;
+}
+
+.modal-cancel-btn:hover {
+  background: #444;
+}
+
+.modal-confirm-btn {
+  background: #4ecca3;
+  color: #000;
+}
+
+.modal-confirm-btn:hover:not(:disabled) {
+  background: #3db88f;
+}
+
+.modal-confirm-btn:disabled {
+  background: #333;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Facebook Listing Modal */
+.listing-modal {
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.listing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.listing-loading {
+  padding: 2.5rem;
+  text-align: center;
+  color: #888;
+}
+
+.listing-content {
+  overflow-y: auto;
+  max-height: calc(80vh - 100px);
+}
+
+.fb-instructions {
+  color: #888;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.listing-section {
+  margin-bottom: 1.25rem;
+}
+
+.section-label {
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.fb-preview-box {
+  background: #0f0f1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.fb-preview-title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.fb-preview-description {
+  color: #ccc;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.fb-preview-price {
+  color: #4ecca3;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.checklist-bullet {
+  color: #888;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.checklist-text {
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.fb-copy-btn {
+  width: 100%;
+  background: #1877F2;
+  color: #fff;
+  border: none;
+  padding: 0.875rem;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fb-copy-btn:hover {
+  background: #0a5fcf;
+  transform: translateY(-1px);
+}
+
+.fb-note {
+  color: #666;
+  font-size: 0.75rem;
+  text-align: center;
+  margin-top: 0.75rem;
+}
