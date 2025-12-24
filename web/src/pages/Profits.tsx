@@ -57,9 +57,11 @@ export default function Profits() {
     0
   )
 
-  const formatPrice = (price: number | null) => {
-    if (price === null) return '$0.00'
-    return `$${price.toFixed(2)}`
+  const formatPrice = (price: number | string | null) => {
+    if (price === null || price === undefined) return '$0.00'
+    const num = typeof price === 'string' ? parseFloat(price) : price
+    if (isNaN(num)) return '$0.00'
+    return `$${num.toFixed(2)}`
   }
 
   const formatDate = (dateStr: string | null) => {
