@@ -32,6 +32,9 @@ class CreateListingRequest(BaseModel):
     price: float
     condition: str = "used"
     image_urls: list[str] = []
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    aspects: Optional[dict] = None
 
 
 @router.get("", response_model=list[FlipResponse])
@@ -243,6 +246,9 @@ async def create_flip_listing(
             condition=listing_data.condition,
             price=listing_data.price,
             image_urls=listing_data.image_urls,
+            brand=listing_data.brand,
+            model=listing_data.model,
+            aspects=listing_data.aspects,
         )
 
         if listing_result.get("success"):

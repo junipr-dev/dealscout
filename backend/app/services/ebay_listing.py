@@ -68,6 +68,9 @@ async def create_ebay_listing(
     price: float,
     quantity: int = 1,
     image_urls: list[str] = None,
+    brand: str = None,
+    model: str = None,
+    aspects: dict = None,
 ) -> dict:
     """
     Create a listing on eBay using the Inventory API.
@@ -90,6 +93,22 @@ async def create_ebay_listing(
 
     async with httpx.AsyncClient() as client:
         # Step 1: Create/update inventory item
+        # Build aspects dict for item specifics
+        item_aspects = aspects or {}
+        if brand:
+            item_aspects["Brand"] = [brand]
+        if model:
+            item_aspects["Model"] = [model]
+
+        product_data = {
+            "title": title[:80],  # eBay limit
+            "description": description,
+            "imageUrls": image_urls or [],
+        }
+
+        if item_aspects:
+            product_data["aspects"] = item_aspects
+
         inventory_item = {
             "availability": {
                 "shipToLocationAvailability": {
@@ -97,11 +116,7 @@ async def create_ebay_listing(
                 }
             },
             "condition": CONDITION_MAP.get(condition, "USED_EXCELLENT"),
-            "product": {
-                "title": title[:80],  # eBay limit
-                "description": description,
-                "imageUrls": image_urls or [],
-            }
+            "product": product_data,
         }
 
         response = await client.put(
@@ -116,7 +131,47 @@ async def create_ebay_listing(
             print(f"eBay inventory item error: {response.status_code} - {error_detail}")
             raise ValueError(f"Failed to create inventory item: {error_detail}")
 
-        # Step 2: Create offer
+        # Step 2: Ensure we have an inventory location
+        location_key = "default-location"
+        location_response = await client.get(
+            f"{EBAY_INVENTORY_API}/location/{location_key}",
+            headers=headers,
+            timeout=30.0,
+        )
+
+        if location_response.status_code == 404:
+            # Create default location
+            location_data = {
+                "location": {
+                    "address": {
+                        "city": "Cookeville",
+                        "stateOrProvince": "TN",
+                        "postalCode": "38501",
+                        "country": "US"
+                    }
+                },
+                "locationTypes": ["WAREHOUSE"],
+                "name": "Default Location",
+                "merchantLocationStatus": "ENABLED"
+            }
+            await client.post(
+                f"{EBAY_INVENTORY_API}/location/{location_key}",
+                headers=headers,
+                json=location_data,
+                timeout=30.0,
+            )
+
+        # Step 3: Ensure business policies exist
+        policies = await ensure_business_policies(access_token)
+
+        if not policies.get("fulfillmentPolicyId"):
+            return {
+                "success": False,
+                "error": "Could not create or find fulfillment policy",
+                "requires_manual_listing": True,
+            }
+
+        # Step 4: Create offer
         offer = {
             "sku": sku,
             "marketplaceId": "EBAY_US",
@@ -124,16 +179,14 @@ async def create_ebay_listing(
             "listingDescription": description,
             "availableQuantity": quantity,
             "categoryId": category_id,
+            "merchantLocationKey": location_key,
             "pricingSummary": {
                 "price": {
                     "currency": "USD",
                     "value": str(price)
                 }
             },
-            "listingPolicies": {
-                # These need to be configured in your eBay account
-                # We'll use defaults or return an error
-            }
+            "listingPolicies": policies,
         }
 
         response = await client.post(
@@ -157,7 +210,7 @@ async def create_ebay_listing(
         offer_data = response.json()
         offer_id = offer_data.get("offerId")
 
-        # Step 3: Publish the offer
+        # Step 5: Publish the offer
         response = await client.post(
             f"{EBAY_INVENTORY_API}/offer/{offer_id}/publish",
             headers=headers,
@@ -185,6 +238,126 @@ async def create_ebay_listing(
             "listing_id": listing_id,
             "ebay_url": f"{EBAY_VIEW_URL}/{listing_id}",
         }
+
+
+async def ensure_business_policies(access_token: str) -> dict:
+    """Create default business policies if they don't exist."""
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    account_api = EBAY_URLS["account"]
+    policies = {}
+
+    async with httpx.AsyncClient() as client:
+        # Check/create fulfillment policy
+        print(f"Checking fulfillment policies at: {account_api}/fulfillment_policy")
+        response = await client.get(
+            f"{account_api}/fulfillment_policy?marketplace_id=EBAY_US",
+            headers=headers,
+            timeout=30.0,
+        )
+        print(f"Fulfillment policy GET response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
+
+        if response.status_code == 200:
+            data = response.json()
+            policy_list = data.get("fulfillmentPolicies", [])
+            if policy_list:
+                policies["fulfillmentPolicyId"] = policy_list[0].get("fulfillmentPolicyId")
+
+        if "fulfillmentPolicyId" not in policies:
+            # Create a default fulfillment policy
+            print("Creating new fulfillment policy...")
+            policy_data = {
+                "name": "DealScout Default Shipping",
+                "marketplaceId": "EBAY_US",
+                "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
+                "handlingTime": {"value": 1, "unit": "DAY"},
+                "shippingOptions": [{
+                    "optionType": "DOMESTIC",
+                    "costType": "FLAT_RATE",
+                    "shippingServices": [{
+                        "sortOrder": 1,
+                        "shippingCarrierCode": "USPS",
+                        "shippingServiceCode": "USPSPriority",
+                        "shippingCost": {"value": "0.00", "currency": "USD"},
+                        "freeShipping": True
+                    }]
+                }]
+            }
+            response = await client.post(
+                f"{account_api}/fulfillment_policy",
+                headers=headers,
+                json=policy_data,
+                timeout=30.0,
+            )
+            print(f"Fulfillment policy POST response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
+            if response.status_code in (200, 201):
+                policies["fulfillmentPolicyId"] = response.json().get("fulfillmentPolicyId")
+
+        # Check/create payment policy
+        response = await client.get(
+            f"{account_api}/payment_policy?marketplace_id=EBAY_US",
+            headers=headers,
+            timeout=30.0,
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            policy_list = data.get("paymentPolicies", [])
+            if policy_list:
+                policies["paymentPolicyId"] = policy_list[0].get("paymentPolicyId")
+
+        if "paymentPolicyId" not in policies:
+            policy_data = {
+                "name": "DealScout Default Payment",
+                "marketplaceId": "EBAY_US",
+                "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
+                "paymentMethods": [{"paymentMethodType": "PERSONAL_CHECK"}]
+            }
+            response = await client.post(
+                f"{account_api}/payment_policy",
+                headers=headers,
+                json=policy_data,
+                timeout=30.0,
+            )
+            if response.status_code in (200, 201):
+                policies["paymentPolicyId"] = response.json().get("paymentPolicyId")
+
+        # Check/create return policy
+        response = await client.get(
+            f"{account_api}/return_policy?marketplace_id=EBAY_US",
+            headers=headers,
+            timeout=30.0,
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            policy_list = data.get("returnPolicies", [])
+            if policy_list:
+                policies["returnPolicyId"] = policy_list[0].get("returnPolicyId")
+
+        if "returnPolicyId" not in policies:
+            policy_data = {
+                "name": "DealScout Default Returns",
+                "marketplaceId": "EBAY_US",
+                "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
+                "returnsAccepted": True,
+                "returnPeriod": {"value": 30, "unit": "DAY"},
+                "refundMethod": "MONEY_BACK",
+                "returnShippingCostPayer": "BUYER"
+            }
+            response = await client.post(
+                f"{account_api}/return_policy",
+                headers=headers,
+                json=policy_data,
+                timeout=30.0,
+            )
+            if response.status_code in (200, 201):
+                policies["returnPolicyId"] = response.json().get("returnPolicyId")
+
+    return policies
 
 
 async def get_listing_policies(db: AsyncSession) -> dict:

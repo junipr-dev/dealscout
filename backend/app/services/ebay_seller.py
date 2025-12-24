@@ -21,8 +21,8 @@ def get_ebay_base_urls() -> dict:
         return {
             "auth": "https://auth.sandbox.ebay.com/oauth2/authorize",
             "token": "https://api.sandbox.ebay.com/identity/v1/oauth2/token",
-            "account": "https://apiz.sandbox.ebay.com/sell/account/v1",
-            "identity": "https://apiz.sandbox.ebay.com/commerce/identity/v1",
+            "account": "https://api.sandbox.ebay.com/sell/account/v1",
+            "identity": "https://api.sandbox.ebay.com/commerce/identity/v1",
             "fulfillment": "https://api.sandbox.ebay.com/sell/fulfillment/v1",
             "inventory": "https://api.sandbox.ebay.com/sell/inventory/v1",
             "browse": "https://api.sandbox.ebay.com/buy/browse/v1",
@@ -47,8 +47,10 @@ EBAY_ACCOUNT_API = EBAY_URLS["account"]
 # Scopes needed for seller account access and listing creation
 SELLER_SCOPES = [
     "https://api.ebay.com/oauth/api_scope",
+    "https://api.ebay.com/oauth/api_scope/sell.account",  # Full account access (for business policies)
     "https://api.ebay.com/oauth/api_scope/sell.account.readonly",
     "https://api.ebay.com/oauth/api_scope/sell.inventory",  # Create/manage listings
+    "https://api.ebay.com/oauth/api_scope/sell.fulfillment",  # Full order access
     "https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly",  # Read orders
 ]
 
@@ -310,7 +312,7 @@ async def get_ebay_account_status(db: AsyncSession) -> dict:
     if not creds:
         return {
             "linked": False,
-            "auth_url": get_auth_url() if settings.ebay_ru_name else None,
+            "auth_url": get_auth_url() if settings.get_ebay_ru_name() else None,
         }
 
     return {

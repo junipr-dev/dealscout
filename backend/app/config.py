@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     ebay_sandbox: bool = False  # Set to true to use sandbox API
     ebay_sandbox_app_id: str = ""
     ebay_sandbox_cert_id: str = ""
+    ebay_sandbox_dev_id: str = ""
     ebay_sandbox_ru_name: str = ""
 
     def get_ebay_app_id(self) -> str:
